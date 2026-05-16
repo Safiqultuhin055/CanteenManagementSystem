@@ -1,0 +1,71 @@
+%% Canteen Management System — Overall Project Functional Flow
+%% High-level browser-based application workflow
+
+flowchart TB
+    subgraph CLIENT["Client Devices"]
+        WEB[Desktop / Laptop Browser]
+        TAB[Tablet / Mobile Browser]
+        POS_UI[POS Touch Screen]
+        KDS_UI[Kitchen Display TV]
+        TOKEN_UI[Token Display TV]
+    end
+
+    subgraph DJANGO["Django Web Application"]
+        AUTH[Users App<br/>Login / Logout / Password]
+        DASH[Core Dashboard]
+        EMP[Employee Module<br/>Departments / Employees / Cards]
+        INV[Inventory Module<br/>Menu / Stock / Purchases / Waste]
+        BAL[Balance Module<br/>Allocation / Credit / Monthly Allowance]
+        POS[POS Module<br/>RFID Scan / Checkout / Receipt]
+        KIT[Kitchen Module<br/>Live Queue / Status Updates]
+        DIST[Distribution Module<br/>Counter / Token Verify]
+        REQ[Employee Requests<br/>Submit / Approve]
+        RPT[Reports Module<br/>Sales / Inventory / Excel PDF]
+        ADM[Django Admin + Settings]
+        AUD[Audit and Session Logging]
+    end
+
+    subgraph DATABASE["Microsoft SQL Server"]
+        DB[(CanteenManagementDB)]
+        SP[Stored Procedures]
+        VW[Reporting Views]
+    end
+
+    WEB --> AUTH
+    TAB --> AUTH
+    POS_UI --> POS
+    KDS_UI --> KIT
+    TOKEN_UI --> DIST
+
+    AUTH -->|Session OK| DASH
+    DASH --> EMP
+    DASH --> INV
+    DASH --> BAL
+    DASH --> POS
+    DASH --> KIT
+    DASH --> DIST
+    DASH --> REQ
+    DASH --> RPT
+    DASH --> ADM
+
+    EMP --> DB
+    INV --> DB
+    BAL --> SP
+    POS --> SP
+    KIT --> DB
+    DIST --> SP
+    REQ --> SP
+    RPT --> VW
+    AUTH --> AUD
+    POS --> AUD
+
+    SP --> DB
+    VW --> DB
+
+    POS -->|Order placed| KIT
+    KIT -->|Food READY| DIST
+    DIST -->|PICKED_UP| RPT
+
+    style CLIENT fill:#e8f4fc,stroke:#2563eb
+    style DJANGO fill:#f0fdf4,stroke:#16a34a
+    style DATABASE fill:#fef3c7,stroke:#d97706

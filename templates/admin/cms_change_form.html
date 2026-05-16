@@ -1,0 +1,11 @@
+{% extends "admin/change_form.html" %}
+
+{% block content %}
+{% if not is_popup %}
+<p style="margin:0 0 14px;padding:10px 14px;background:#eff6ff;border-radius:8px;border-left:4px solid #2563eb;color:#1e40af;font-size:13px;">
+    <strong>CanteenSys custom form</strong> — validated against database rules.
+    <a href="/settings/" style="margin-left:8px;">← Back to Settings</a>
+</p>
+{% endif %}
+{{ block.super }}
+{% endblock %}

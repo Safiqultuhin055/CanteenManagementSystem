@@ -1,0 +1,209 @@
+{% extends 'core/layout_app.html' %}
+{% load static %}
+{% block page_title %}{{ doc_title }}{% endblock %}
+
+{% block page_css %}
+<style>
+    .doc-hero {
+        background: linear-gradient(125deg, #0f172a 0%, #1e3a8a 55%, #4f46e5 100%);
+        border-radius: 18px;
+        color: #fff;
+        padding: 2rem 2.25rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 16px 48px rgba(30, 58, 138, 0.25);
+    }
+    .doc-hero.technical {
+        background: linear-gradient(125deg, #18181b 0%, #27272a 40%, #1e40af 100%);
+    }
+    .doc-layout { display: grid; grid-template-columns: 240px 1fr; gap: 1.5rem; align-items: start; }
+    @media (max-width: 991px) { .doc-layout { grid-template-columns: 1fr; } }
+    .doc-toc {
+        position: sticky; top: 1rem;
+        background: var(--dash-surface);
+        border: 1px solid var(--dash-border);
+        border-radius: 14px;
+        padding: 1rem;
+        box-shadow: var(--dash-shadow);
+    }
+    .doc-toc a {
+        display: block; padding: 0.45rem 0.65rem;
+        font-size: 0.82rem; color: var(--dash-muted);
+        text-decoration: none; border-radius: 8px;
+        border-left: 3px solid transparent;
+    }
+    .doc-toc a:hover, .doc-toc a.active {
+        color: #1d4ed8; background: #eff6ff;
+        border-left-color: #3b82f6;
+    }
+    .doc-body {
+        background: var(--dash-surface);
+        border: 1px solid var(--dash-border);
+        border-radius: 18px;
+        padding: 2rem 2.25rem;
+        box-shadow: var(--dash-shadow);
+    }
+    .doc-body h2 {
+        font-size: 1.15rem; font-weight: 800;
+        margin: 2rem 0 1rem; padding-bottom: 0.5rem;
+        border-bottom: 2px solid #e2e8f0;
+        color: #0f172a;
+    }
+    .doc-body h2:first-child { margin-top: 0; }
+    .doc-body h3 { font-size: 0.95rem; font-weight: 700; margin: 1.25rem 0 0.65rem; color: #334155; }
+    .doc-body p, .doc-body li { font-size: 0.9rem; color: #475569; line-height: 1.65; }
+    .doc-body ul { padding-left: 1.25rem; }
+    .step-card {
+        border: 1px solid #e2e8f0; border-radius: 12px;
+        padding: 1rem 1.15rem; margin-bottom: 0.75rem;
+        background: #f8fafc;
+    }
+    .step-num {
+        width: 28px; height: 28px; border-radius: 8px;
+        background: #2563eb; color: #fff;
+        font-weight: 800; font-size: 0.75rem;
+        display: inline-flex; align-items: center; justify-content: center;
+        margin-right: 0.5rem;
+    }
+    .module-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.75rem; }
+    .module-chip {
+        border: 1px solid #e2e8f0; border-radius: 12px;
+        padding: 0.85rem; background: #fff;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .module-chip:hover { border-color: #93c5fd; box-shadow: 0 4px 16px rgba(37,99,235,0.08); }
+    .module-chip i { font-size: 1.25rem; color: #2563eb; margin-bottom: 0.35rem; display: block; }
+    .module-chip strong { font-size: 0.85rem; display: block; color: #0f172a; }
+    .module-chip span { font-size: 0.75rem; color: #64748b; }
+    .doc-table { font-size: 0.85rem; }
+    .doc-table th { background: #f1f5f9; font-weight: 600; }
+    code, .doc-code {
+        background: #f1f5f9; padding: 0.15rem 0.4rem;
+        border-radius: 4px; font-size: 0.82em; color: #be123c;
+    }
+    pre.doc-pre {
+        background: #0f172a; color: #e2e8f0;
+        padding: 1rem 1.15rem; border-radius: 12px;
+        font-size: 0.78rem; overflow-x: auto;
+    }
+    .doc-callout {
+        border-left: 4px solid #3b82f6;
+        background: #eff6ff; padding: 1rem 1.15rem;
+        border-radius: 0 12px 12px 0; margin: 1rem 0;
+    }
+    .doc-callout.warning { border-color: #f59e0b; background: #fffbeb; }
+    .diagram-panel {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 1.25rem;
+        margin: 1.25rem 0 1.5rem;
+        overflow-x: auto;
+    }
+    .diagram-panel .diagram-caption {
+        font-size: 0.8rem; color: #64748b; margin-top: 0.85rem;
+        display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;
+    }
+    .diagram-panel img.diagram-img {
+        width: 100%; height: auto; border-radius: 12px;
+        border: 1px solid #e2e8f0; background: #fff;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+    }
+    .diagram-panel .mermaid {
+        background: #fff; border-radius: 12px; padding: 1rem;
+        min-height: 120px;
+    }
+    .module-legend { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1rem 0; }
+    .module-legend span {
+        font-size: 0.72rem; font-weight: 700; padding: 0.25rem 0.55rem;
+        border-radius: 6px; text-transform: uppercase;
+    }
+    .leg-security { background: #dbeafe; color: #1e40af; }
+    .leg-org { background: #d1fae5; color: #047857; }
+    .leg-inv { background: #ffedd5; color: #c2410c; }
+    .leg-bal { background: #ede9fe; color: #6d28d9; }
+    .leg-sales { background: #fee2e2; color: #b91c1c; }
+    .leg-req { background: #ccfbf1; color: #0f766e; }
+</style>
+{% endblock %}
+
+{% block page_content %}
+<section class="doc-hero {% if doc_type == 'technical' %}technical{% endif %}">
+    <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
+        <div>
+            <span class="badge bg-white bg-opacity-25 mb-2"><i class="bi {{ doc_icon }} me-1"></i> {{ doc_title }}</span>
+            <h1 class="fw-bold mb-2 h3">{{ doc_title }}</h1>
+            <p class="mb-0 opacity-90">{{ doc_subtitle }}</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{% url 'core:dashboard' %}" class="btn btn-light btn-sm"><i class="bi bi-house me-1"></i>Home</a>
+            {% if doc_type == 'user' %}
+            {% if user_is_admin or 'TECH_DOC_VIEW' in user_permission_codes %}
+            <a href="{% url 'core:help_technical' %}" class="btn btn-outline-light btn-sm">Technical Docs</a>
+            {% endif %}
+            {% else %}
+            <a href="{% url 'core:help_user_manual' %}" class="btn btn-outline-light btn-sm">User Manual</a>
+            {% endif %}
+            <a href="{% url 'core:help_diagrams' %}" class="btn btn-outline-light btn-sm"><i class="bi bi-diagram-3 me-1"></i>Diagrams</a>
+        </div>
+    </div>
+</section>
+
+<div class="doc-layout">
+    <nav class="doc-toc d-none d-lg-block" id="docToc">
+        <p class="small fw-bold text-uppercase text-muted mb-2 px-1">On this page</p>
+        {% if doc_type == 'user' %}
+        <a href="#overview">Overview</a>
+        <a href="#login">Sign in</a>
+        <a href="#dashboard">Dashboard</a>
+        <a href="#pos">Point of Sale</a>
+        <a href="#kitchen">Kitchen</a>
+        <a href="#distribution">Distribution</a>
+        <a href="#balance">Balance &amp; cards</a>
+        <a href="#admin">Admin tasks</a>
+        <a href="#support">Support</a>
+        {% else %}
+        <a href="#architecture">Architecture</a>
+        <a href="#erd">Database ERD</a>
+        <a href="#flow">Functional flow</a>
+        <a href="#stack">Technology stack</a>
+        <a href="#database">Database scripts</a>
+        <a href="#modules">DB modules</a>
+        <a href="#django">Django apps</a>
+        <a href="#env">Environment</a>
+        <a href="#deploy">Run &amp; deploy</a>
+        <a href="#security">Security</a>
+        <a href="#scripts">Stored procedures</a>
+        {% endif %}
+    </nav>
+    <article class="doc-body">
+        {% if doc_type == 'user' %}
+            {% include 'core/docs/user_manual_content.html' %}
+        {% else %}
+            {% include 'core/docs/technical_documentation_content.html' %}
+        {% endif %}
+    </article>
+</div>
+<script>
+(function(){
+    var links = document.querySelectorAll('#docToc a[href^="#"]');
+    links.forEach(function(a){
+        a.addEventListener('click', function(e){
+            var t = document.querySelector(a.getAttribute('href'));
+            if (t) { e.preventDefault(); t.scrollIntoView({behavior:'smooth', block:'start'}); }
+        });
+    });
+})();
+</script>
+{% if doc_type == 'technical' %}
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+mermaid.initialize({
+    startOnLoad: true,
+    theme: 'neutral',
+    securityLevel: 'loose',
+    flowchart: { useMaxWidth: true, htmlLabels: true },
+    er: { useMaxWidth: true }
+});
+</script>
+{% endif %}
+{% endblock %}

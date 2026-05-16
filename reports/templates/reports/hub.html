@@ -1,0 +1,74 @@
+{% extends 'core/layout_app.html' %}
+
+{% block title %}Reports{% endblock %}
+
+{% block page_title %}
+<h1 class="h4 mb-0 fw-bold"><i class="bi bi-graph-up text-primary me-2"></i>Reports</h1>
+<small class="text-muted d-block">Overview for {{ today }}</small>
+{% endblock %}
+
+{% block page_content %}
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm border-start border-primary border-4 h-100">
+            <div class="card-body">
+                <div class="text-muted small text-uppercase fw-semibold">Today's revenue</div>
+                <div class="fs-3 fw-bold text-primary">৳{{ revenue_today|floatformat:2 }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm border-start border-success border-4 h-100">
+            <div class="card-body">
+                <div class="text-muted small text-uppercase fw-semibold">Orders today</div>
+                <div class="fs-3 fw-bold text-success">{{ orders_today }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm border-start border-warning border-4 h-100">
+            <div class="card-body">
+                <div class="text-muted small text-uppercase fw-semibold">Credit used</div>
+                <div class="fs-3 fw-bold text-warning">৳{{ credit_today|floatformat:2 }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm border-start border-danger border-4 h-100">
+            <div class="card-body">
+                <div class="text-muted small text-uppercase fw-semibold">Low stock alerts</div>
+                <div class="fs-3 fw-bold text-danger">{{ low_stock }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-6 col-lg-4">
+        <a href="{% url 'reports:sales_report' %}" class="card border-0 shadow-sm text-decoration-none h-100 hover-lift">
+            <div class="card-body">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="rounded-3 bg-primary bg-opacity-10 text-primary p-3"><i class="bi bi-currency-exchange fs-4"></i></span>
+                    <div>
+                        <h5 class="fw-bold text-dark mb-1">Sales report</h5>
+                        <p class="text-muted small mb-0">Revenue trend, departments, top items</p>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-6 col-lg-4">
+        <div class="card border-0 shadow-sm h-100 opacity-75">
+            <div class="card-body">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="rounded-3 bg-secondary bg-opacity-10 text-secondary p-3"><i class="bi bi-box-seam fs-4"></i></span>
+                    <div>
+                        <h5 class="fw-bold text-muted mb-1">Inventory report</h5>
+                        <p class="text-muted small mb-0">Coming soon</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,207 @@
+{% extends 'core/layout_app.html' %}
+
+{% block title %}Distribution Counter{% endblock %}
+
+{% block page_title %}
+<h1 class="h4 mb-0 fw-bold"><i class="bi bi-box-seam text-primary me-2"></i>Distribution Counter</h1>
+<small class="text-muted d-block">{{ stats.today }} — Ready for pickup workflow</small>
+{% endblock %}
+
+{% block page_css %}
+<style>
+    .flow-steps { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+    .flow-step {
+        flex: 1; min-width: 140px; padding: 0.65rem 0.85rem; border-radius: 10px;
+        background: #f8fafc; border: 1px solid #e2e8f0; font-size: 0.8rem;
+    }
+    .flow-step strong { display: block; color: #0f172a; }
+    .flow-step.active { border-color: #22c55e; background: #f0fdf4; }
+    .dist-stat { border-radius: 14px; padding: 1rem 1.15rem; background: #fff; border: 1px solid #e2e8f0; box-shadow: 0 2px 12px rgba(15,23,42,0.04); }
+    .dist-stat .val { font-size: 1.75rem; font-weight: 800; line-height: 1.1; }
+    .token-card {
+        border-radius: 14px; padding: 1rem; height: 100%;
+        background: #fff; border: 2px solid #bbf7d0;
+        box-shadow: 0 4px 16px rgba(22,163,74,0.12);
+        transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .token-card.called { border-color: #f59e0b; background: #fffbeb; animation: glow 1.5s ease-in-out infinite; }
+    .token-card .token-num { font-size: 2rem; font-weight: 800; color: #15803d; line-height: 1; }
+    .token-card.called .token-num { color: #b45309; }
+    .token-actions { display: flex; gap: 0.35rem; margin-top: 0.75rem; flex-wrap: wrap; }
+    .token-actions .btn { flex: 1; min-width: 70px; font-size: 0.75rem; padding: 0.35rem 0.5rem; }
+    .prep-chip {
+        display: inline-flex; align-items: center; justify-content: center;
+        min-width: 3.5rem; padding: 0.5rem 0.85rem; margin: 0.25rem;
+        border-radius: 10px; background: #fef3c7; color: #92400e; font-weight: 700;
+    }
+    .item-line { font-size: 0.78rem; color: #64748b; margin-top: 0.35rem; }
+    @keyframes glow {
+        0%, 100% { box-shadow: 0 4px 16px rgba(245,158,11,0.2); }
+        50% { box-shadow: 0 6px 24px rgba(245,158,11,0.45); }
+    }
+    .search-box { max-width: 220px; }
+</style>
+{% endblock %}
+
+{% block page_content %}
+<div class="flow-steps">
+    <div class="flow-step"><strong>1. POS</strong>Order placed → kitchen queue</div>
+    <div class="flow-step"><strong>2. Kitchen</strong>Mark as <em>Ready</em> when cooked</div>
+    <div class="flow-step active"><strong>3. Here</strong>Token appears — call & deliver</div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="dist-stat border-start border-4 border-success">
+            <div class="text-muted small text-uppercase fw-semibold">Ready for pickup</div>
+            <div class="val text-success" id="stat-ready">{{ stats.ready }}</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="dist-stat border-start border-4 border-warning">
+            <div class="text-muted small text-uppercase fw-semibold">In kitchen</div>
+            <div class="val text-warning" id="stat-preparing">{{ stats.preparing }}</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="dist-stat border-start border-4 border-primary">
+            <div class="text-muted small text-uppercase fw-semibold">Delivered today</div>
+            <div class="val text-primary" id="stat-picked">{{ stats.picked }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h5 class="mb-0 fw-bold"><i class="bi bi-fire text-warning me-2"></i>Preparing (kitchen)</h5>
+        <a href="{% url 'kitchen:kds_dashboard' %}" class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-display me-1"></i>Kitchen</a>
+        <a href="{% url 'distribution:token_display' %}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-tv me-1"></i>TV display</a>
+    </div>
+    <div class="card-body" id="preparing-wrap">
+        <span class="text-muted small">Loading…</span>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h5 class="mb-0 fw-bold text-success"><i class="bi bi-check2-circle me-2"></i>Ready for pickup</h5>
+        <input type="number" class="form-control form-control-sm search-box" id="token-search" placeholder="Token #…" min="1">
+    </div>
+    <div class="card-body">
+        <p class="text-muted small mb-3">
+            Kitchen-এ <strong>Mark ready</strong> করলে টোকেন এখানে আসে।
+            <strong>Call</strong> = TV-তে দেখান, <strong>Deliver</strong> = হাতে দিয়ে সম্পন্ন।
+        </p>
+        <div class="row g-3" id="ready-tokens-container">
+            <p class="text-muted mb-0 col-12">No tokens ready — kitchen-এ order ready করুন</p>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3" id="dist-toast-wrap"></div>
+{% endblock %}
+
+{% block page_js %}
+<script>
+const CSRF = (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '{{ csrf_token }}';
+let allReady = [];
+
+function showToast(msg, type) {
+    const wrap = document.getElementById('dist-toast-wrap');
+    const el = document.createElement('div');
+    el.className = 'toast align-items-center text-bg-' + (type === 'error' ? 'danger' : 'success') + ' border-0 show';
+    el.innerHTML = '<div class="d-flex"><div class="toast-body">' + msg + '</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>';
+    wrap.appendChild(el);
+    setTimeout(() => el.remove(), 4000);
+}
+
+function fetchTokens() {
+    fetch('{% url "distribution:api_get_tokens" %}')
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) return;
+            renderPreparing(data.preparing || []);
+            allReady = data.ready_details || [];
+            renderReady(allReady);
+            document.getElementById('stat-ready').textContent = (data.ready || []).length;
+            document.getElementById('stat-preparing').textContent = (data.preparing || []).length;
+            if (data.picked_today !== undefined) {
+                document.getElementById('stat-picked').textContent = data.picked_today;
+            }
+        });
+}
+
+function renderPreparing(list) {
+    const wrap = document.getElementById('preparing-wrap');
+    if (!list.length) {
+        wrap.innerHTML = '<span class="text-muted">No orders in kitchen right now</span>';
+        return;
+    }
+    wrap.innerHTML = list.map(t => '<span class="prep-chip">#' + t + '</span>').join('');
+}
+
+function renderReady(details) {
+    const container = document.getElementById('ready-tokens-container');
+    const q = document.getElementById('token-search').value.trim();
+    let filtered = details;
+    if (q) filtered = details.filter(d => String(d.token).includes(q));
+
+    if (!filtered.length) {
+        container.innerHTML = '<p class="text-muted mb-0 col-12">No tokens ready — kitchen-এ <strong>Mark ready</strong> করুন</p>';
+        return;
+    }
+    container.innerHTML = filtered.map(d => {
+        const name = (d.customer || 'Guest').split(' ')[0];
+        const items = (d.items || []).map(i => i.quantity + 'x ' + i.item_name).join(', ') || (d.item_summary || '');
+        const called = d.called ? ' called' : '';
+        return '<div class="col-12 col-sm-6 col-lg-4 col-xl-3">' +
+            '<div class="token-card' + called + '" data-token="' + d.token + '">' +
+            '<div class="token-num">#' + d.token + '</div>' +
+            '<div class="fw-semibold">' + name + '</div>' +
+            '<div class="small text-muted">' + (d.order_number || '') + '</div>' +
+            '<div class="item-line text-truncate" title="' + items + '">' + items + '</div>' +
+            '<div class="token-actions">' +
+            '<button type="button" class="btn btn-warning" onclick="callToken(' + d.token + ')"><i class="bi bi-megaphone"></i> Call</button>' +
+            '<button type="button" class="btn btn-success" onclick="markDelivered(' + d.token + ')"><i class="bi bi-check2"></i> Deliver</button>' +
+            '</div></div></div>';
+    }).join('');
+}
+
+function callToken(token) {
+    fetch('{% url "distribution:api_call_token" %}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        credentials: 'same-origin',
+        body: JSON.stringify({ token_number: token }),
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message);
+            fetchTokens();
+        } else alert(data.message || 'Call failed');
+    });
+}
+
+function markDelivered(token) {
+    if (!confirm('Token #' + token + ' — customer picked up?')) return;
+    fetch('{% url "distribution:api_mark_delivered" %}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        credentials: 'same-origin',
+        body: JSON.stringify({ token_number: token }),
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Token #' + token + ' delivered');
+            fetchTokens();
+        } else alert(data.message || 'Failed');
+    });
+}
+
+document.getElementById('token-search').addEventListener('input', function() { renderReady(allReady); });
+setInterval(fetchTokens, 3000);
+fetchTokens();
+</script>
+{% endblock %}

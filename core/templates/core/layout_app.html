@@ -1,0 +1,147 @@
+{% extends 'core/base.html' %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --dash-bg: #f4f6fb;
+        --dash-surface: #ffffff;
+        --dash-sidebar: linear-gradient(185deg, #0f172a 0%, #1e293b 45%, #0f172a 100%);
+        --dash-accent: #3b82f6;
+        --dash-text: #0f172a;
+        --dash-muted: #64748b;
+        --dash-border: #e2e8f0;
+        --dash-radius: 16px;
+        --dash-shadow: 0 4px 24px rgba(15, 23, 42, 0.06);
+    }
+    body { font-family: 'Plus Jakarta Sans', 'Inter', sans-serif; background: var(--dash-bg) !important; }
+    .app-shell { display: flex; min-height: 100vh; }
+    .app-sidebar {
+        width: 268px; flex-shrink: 0;
+        background: var(--dash-sidebar); color: #e2e8f0;
+        display: flex; flex-direction: column;
+        box-shadow: 4px 0 24px rgba(0,0,0,0.12);
+    }
+    .app-sidebar .brand { padding: 1.35rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .brand-logo {
+        width: 42px; height: 42px; border-radius: 12px;
+        background: linear-gradient(135deg, #f59e0b, #ea580c);
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 4px 16px rgba(245, 158, 11, 0.35);
+    }
+    .app-sidebar .nav-link {
+        color: rgba(255,255,255,0.72); border-radius: 10px;
+        margin: 2px 10px; padding: 0.6rem 0.9rem; font-size: 0.88rem; font-weight: 500;
+    }
+    .app-sidebar .nav-link:hover { color: #fff; background: rgba(255,255,255,0.08); }
+    .app-sidebar .nav-link.active {
+        color: #fff;
+        background: linear-gradient(90deg, rgba(59,130,246,0.35), rgba(139,92,246,0.2));
+        border: 1px solid rgba(59,130,246,0.3);
+    }
+    .app-sidebar .nav-link i { width: 1.4rem; margin-right: 0.5rem; }
+    .submenu .nav-link { font-size: 0.82rem; padding-left: 2.25rem; }
+    .sidebar-user {
+        padding: 1rem; margin: 0.5rem 0.75rem 1rem;
+        background: rgba(255,255,255,0.05); border-radius: 12px;
+        border: 1px solid rgba(255,255,255,0.08);
+    }
+    .app-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .app-topbar {
+        background: var(--dash-surface); border-bottom: 1px solid var(--dash-border);
+        padding: 1rem 1.75rem;
+    }
+    .app-content { padding: 1.5rem 1.75rem 2rem; flex: 1; }
+    @media (max-width: 767px) {
+        .app-sidebar { position: fixed; z-index: 1050; transform: translateX(-100%); transition: transform 0.3s; height: 100vh; }
+        .app-sidebar.show { transform: translateX(0); }
+    }
+</style>
+{% block page_css %}{% endblock %}
+{% endblock %}
+
+{% block content %}
+<div class="app-shell">
+    <aside class="app-sidebar d-flex flex-column" id="appSidebar">
+        <div class="brand d-flex align-items-center gap-3">
+            <div class="brand-logo"><i class="bi bi-cup-hot-fill text-white"></i></div>
+            <div>
+                <div class="fw-bold text-white lh-1">CanteenSys</div>
+                <small style="font-size:0.7rem; opacity:0.55;">Enterprise CMS</small>
+            </div>
+        </div>
+        <nav class="flex-grow-1 py-2 overflow-auto">
+            <ul class="nav flex-column">
+                {% for item in nav_menu_tree %}
+                {% if item.code != 'DASHBOARD' %}
+                <li class="nav-item">
+                    {% if item.has_children %}
+                    <a class="nav-link d-flex align-items-center" data-bs-toggle="collapse" href="#menu-{{ item.id }}">
+                        <i class="bi {{ item.icon }}"></i>{{ item.name }}
+                        <i class="bi bi-chevron-down ms-auto small"></i>
+                    </a>
+                    <div class="collapse submenu" id="menu-{{ item.id }}">
+                        <ul class="nav flex-column">
+                            {% for child in item.children %}
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.path == child.url %}active{% endif %}" href="{{ child.url }}">
+                                    <i class="bi {{ child.icon }}"></i>{{ child.name }}
+                                </a>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% else %}
+                    <a class="nav-link {% if request.path == item.url or item.code == 'DASHBOARD' and '/dashboard' in request.path %}active{% endif %}" href="{{ item.url }}">
+                        <i class="bi {{ item.icon }}"></i>{{ item.name }}
+                    </a>
+                    {% endif %}
+                </li>
+                {% endif %}
+                {% empty %}
+                <li class="nav-item px-3 small opacity-50">No menus assigned</li>
+                {% endfor %}
+            </ul>
+        </nav>
+        <div class="sidebar-user">
+            <div class="dropdown w-100">
+                <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle gap-2" data-bs-toggle="dropdown">
+                    <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center flex-shrink-0" style="width:36px;height:36px;font-size:0.8rem;font-weight:700;">
+                        {{ request.user.username|slice:":2"|upper }}
+                    </div>
+                    <span class="small fw-semibold text-truncate">{{ request.user.full_name|default:request.user.username }}</span>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-dark shadow-lg">
+                    <li><a class="dropdown-item" href="{% url 'users:password_change' %}">Change Password</a></li>
+                    <li><a class="dropdown-item" href="{% url 'core:help_user_manual' %}">User Manual</a></li>
+                    {% if user_is_admin or 'TECH_DOC_VIEW' in user_permission_codes %}
+                    <li><a class="dropdown-item" href="{% url 'core:help_technical' %}">Technical Docs</a></li>
+                    {% endif %}
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item text-danger" href="{% url 'users:logout' %}">Sign out</a></li>
+                </ul>
+            </div>
+        </div>
+    </aside>
+    <div class="app-main">
+        <header class="app-topbar d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-outline-secondary btn-sm d-md-none" type="button" onclick="document.getElementById('appSidebar').classList.toggle('show')"><i class="bi bi-list"></i></button>
+                {% block page_title %}{% endblock %}
+            </div>
+            <div class="d-flex gap-2">
+                <span class="text-muted small d-none d-lg-inline" id="dash-clock"></span>
+                <a href="{% url 'core:help_user_manual' %}" class="btn btn-sm btn-light border"><i class="bi bi-question-circle"></i></a>
+                {% if user_is_admin %}<a href="/admin/" class="btn btn-sm btn-dark"><i class="bi bi-gear"></i></a>{% endif %}
+                <a href="{% url 'pos:dashboard' %}" class="btn btn-sm btn-primary"><i class="bi bi-cart-check me-1"></i>POS</a>
+            </div>
+        </header>
+        <main class="app-content">{% block page_content %}{% endblock %}</main>
+    </div>
+</div>
+<script>
+(function(){var e=document.getElementById('dash-clock');if(e){function t(){e.textContent=new Date().toLocaleString('en-BD',{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});}t();setInterval(t,30000);}})();
+</script>
+{% endblock %}
+
+{% block extra_js %}{% block page_js %}{% endblock %}{% endblock %}

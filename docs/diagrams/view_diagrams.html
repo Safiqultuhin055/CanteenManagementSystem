@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Canteen Management System - Diagrams</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    body { font-family: Segoe UI, sans-serif; margin: 0; background: #f5f7fa; }
+    header { background: #212529; color: #fff; padding: 1rem 2rem; }
+    main { max-width: 1400px; margin: 0 auto; padding: 1.5rem 2rem 3rem; }
+    section { background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); margin-bottom: 2rem; padding: 1.5rem; overflow-x: auto; }
+    h2 { border-bottom: 2px solid #0d6efd; padding-bottom: 0.5rem; }
+    .hint { font-size: 0.85rem; color: #64748b; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Canteen Management System - Project Diagrams</h1>
+    <p>ERD and overall functional flow. Right-click diagram to save as image.</p>
+  </header>
+  <main>
+    <section>
+      <h2>1. Database ERD</h2>
+      <pre class="mermaid">
+erDiagram
+    ROLES ||--o{ USER_ROLES : assigns
+    USERS ||--o{ USER_ROLES : has
+    DEPARTMENTS ||--o{ EMPLOYEES : contains
+    EMPLOYEES ||--o| EMPLOYEE_BALANCES : owns
+    EMPLOYEES ||--o{ EMPLOYEE_CARDS : holds
+    FOOD_CATEGORIES ||--o{ MENU_ITEMS : groups
+    MENU_ITEMS ||--o{ DAILY_FOOD_STOCK : prepared
+    EMPLOYEE_CARDS ||--o{ ORDERS : pays
+    GUEST_CARDS ||--o{ ORDERS : pays
+    ORDERS ||--o{ ORDER_DETAILS : contains
+    ORDERS ||--o| KITCHEN_QUEUE : queued
+    ORDERS ||--o| DISTRIBUTION_QUEUE : distributed
+    ORDERS ||--o| PAYMENTS : settled
+      </pre>
+      <p class="hint">Source: docs/diagrams/erd.mmd</p>
+    </section>
+    <section>
+      <h2>2. Overall Functional Flow</h2>
+      <pre class="mermaid">
+flowchart TB
+    subgraph CLIENT[Client Devices]
+        WEB[Browser]
+        POS_UI[POS Screen]
+        KDS[Kitchen TV]
+        TOKEN[Token TV]
+    end
+    subgraph APP[Django Application]
+        AUTH[Login]
+        DASH[Dashboard]
+        POS[POS Module]
+        KIT[Kitchen]
+        DIST[Distribution]
+        RPT[Reports]
+    end
+    subgraph DB[SQL Server]
+        SQL[(Database)]
+    end
+    WEB --> AUTH --> DASH
+    POS_UI --> POS
+    KDS --> KIT
+    TOKEN --> DIST
+    DASH --> POS
+    POS --> SQL
+    POS --> KIT
+    KIT --> DIST
+    DIST --> RPT
+      </pre>
+      <p class="hint">Source: docs/diagrams/overall_functional_flow.mmd</p>
+    </section>
+  </main>
+  <script>mermaid.initialize({ startOnLoad: true });</script>
+</body>
+</html>

@@ -1,0 +1,145 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Kitchen Display{% endblock %}
+
+{% block extra_css %}
+<style>
+    .kds-wrap { height: 100vh; overflow: hidden; background: #0f172a; color: #e2e8f0; font-family: 'Plus Jakarta Sans', sans-serif; }
+    .kds-top { background: #1e293b; padding: 0.85rem 1.25rem; border-bottom: 1px solid #334155; }
+    .kds-stat { background: rgba(255,255,255,0.06); border-radius: 10px; padding: 0.35rem 0.85rem; font-size: 0.85rem; }
+    .kds-board { height: calc(100vh - 64px); padding: 1rem; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+    .kds-col.ready-col { border-color: #22c55e; }
+    .kds-card.ready-done { border-left-color: #22c55e; opacity: 0.85; }
+    .kds-col { background: #1e293b; border-radius: 14px; border: 1px solid #334155; display: flex; flex-direction: column; min-height: 0; }
+    .kds-col-h { padding: 0.75rem 1rem; font-weight: 700; border-bottom: 1px solid #334155; }
+    .kds-col-body { padding: 0.75rem; overflow-y: auto; flex: 1; }
+    .kds-card { background: #334155; border-radius: 12px; padding: 1rem; margin-bottom: 0.75rem; border-left: 4px solid #f59e0b; }
+    .kds-card.prep { border-left-color: #38bdf8; }
+    .token-pill { font-size: 1.35rem; font-weight: 800; background: #fbbf24; color: #0f172a; padding: 0.2rem 0.75rem; border-radius: 999px; }
+    .kds-items { font-size: 0.95rem; line-height: 1.5; }
+    .wait-badge { font-size: 0.75rem; background: rgba(239,68,68,0.2); color: #fca5a5; padding: 0.15rem 0.5rem; border-radius: 6px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="kds-wrap">
+    <div class="kds-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-3">
+            <h2 class="h5 mb-0 fw-bold text-white"><i class="bi bi-display me-2"></i>Kitchen Display</h2>
+            <span class="kds-stat text-warning"><i class="bi bi-hourglass-split me-1"></i>Pending: <strong id="cnt-pending">{{ stats.pending }}</strong></span>
+            <span class="kds-stat text-info"><i class="bi bi-fire me-1"></i>Preparing: <strong id="cnt-preparing">{{ stats.preparing }}</strong></span>
+            <span class="kds-stat text-success"><i class="bi bi-bag-check me-1"></i>Ready today: <strong id="cnt-ready">0</strong></span>
+        </div>
+        <div>
+            <span class="badge bg-success me-2" id="connection-status">Live</span>
+            <a href="{% url 'distribution:distribution_dashboard' %}" class="btn btn-outline-light btn-sm me-1"><i class="bi bi-box-seam"></i> Distribution</a>
+            <a href="{% url 'core:dashboard' %}" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left"></i> Exit</a>
+        </div>
+    </div>
+    <div class="kds-board">
+        <div class="kds-col">
+            <div class="kds-col-h text-warning"><i class="bi bi-clock me-2"></i>Pending</div>
+            <div class="kds-col-body" id="col-pending"></div>
+        </div>
+        <div class="kds-col">
+            <div class="kds-col-h text-info"><i class="bi bi-egg-fried me-2"></i>Preparing</div>
+            <div class="kds-col-body" id="col-inprogress"></div>
+        </div>
+        <div class="kds-col ready-col">
+            <div class="kds-col-h text-success"><i class="bi bi-check2-circle me-2"></i>Ready → Pickup</div>
+            <div class="kds-col-body" id="col-ready"></div>
+            <p class="small text-center text-muted px-2 pb-2 mb-0">Distribution counter-এ যাবে</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF = '{{ csrf_token }}';
+
+function fetchQueue() {
+    fetch('{% url "kitchen:api_get_queue" %}')
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) return;
+            renderQueue(data.orders);
+            renderReadyPickup(data.ready_pickup || []);
+            document.getElementById('cnt-pending').textContent = data.counts.pending;
+            document.getElementById('cnt-preparing').textContent = data.counts.preparing;
+            document.getElementById('cnt-ready').textContent = data.counts.ready || 0;
+            const st = document.getElementById('connection-status');
+            st.className = 'badge bg-success me-2';
+            st.textContent = 'Live';
+        })
+        .catch(() => {
+            const st = document.getElementById('connection-status');
+            st.className = 'badge bg-danger me-2';
+            st.textContent = 'Offline';
+        });
+}
+
+function itemsHtml(items) {
+    if (!items || !items.length) return '<li class="text-muted">No line items</li>';
+    return items.map(i => `<li>${i.quantity}x ${i.item_name}</li>`).join('');
+}
+
+function renderQueue(orders) {
+    let pending = '', prep = '';
+    orders.forEach(o => {
+        const high = (o.priority || 0) > 0;
+        const card = `
+        <div class="kds-card ${o.status === 'IN_PROGRESS' ? 'prep' : ''}">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="token-pill">#${o.token_number}</span>
+                <span class="wait-badge">${o.wait_minutes || 0} min</span>
+            </div>
+            <div class="small text-white-50 mb-1">${o.order_number || ''} · ${o.customer || 'Guest'}</div>
+            <ul class="kds-items list-unstyled mb-3">${itemsHtml(o.items)}</ul>
+            <div class="d-grid">
+                ${o.status === 'PENDING'
+                    ? `<button class="btn btn-info fw-semibold text-dark" onclick='updateStatus(${JSON.stringify(o)}, "IN_PROGRESS")'>Start preparing</button>`
+                    : `<button class="btn btn-success fw-semibold" onclick='updateStatus(${JSON.stringify(o)}, "READY")'>Mark ready</button>`}
+            </div>
+        </div>`;
+        if (o.status === 'PENDING') pending += card;
+        else if (o.status === 'IN_PROGRESS') prep += card;
+    });
+    document.getElementById('col-pending').innerHTML = pending || '<p class="text-center text-muted mt-4">No pending orders</p>';
+    document.getElementById('col-inprogress').innerHTML = prep || '<p class="text-center text-muted mt-4">Nothing in progress</p>';
+}
+
+function renderReadyPickup(list) {
+    const html = list.map(r => `
+        <div class="kds-card ready-done">
+            <div class="token-pill" style="background:#22c55e;color:#fff;">#${r.token_number}</div>
+            <div class="small text-white-50 mt-2">${r.order_number || ''} · ${r.customer || ''}</div>
+            <div class="small text-success mt-2"><i class="bi bi-box-seam"></i> At distribution</div>
+        </div>`).join('');
+    document.getElementById('col-ready').innerHTML = html || '<p class="text-center text-muted mt-4">None ready yet</p>';
+}
+
+function updateStatus(order, status) {
+    const body = { status };
+    if (order.id) body.queue_id = order.id;
+    else body.order_id = order.order_id;
+    fetch('{% url "kitchen:api_update_status" %}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify(body),
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            fetchQueue();
+            if (data.ready_for_pickup) {
+                alert(data.message || ('Token #' + data.token_number + ' ready for pickup'));
+            }
+        } else alert(data.message || 'Update failed');
+    });
+}
+
+setInterval(fetchQueue, 5000);
+fetchQueue();
+</script>
+{% endblock %}

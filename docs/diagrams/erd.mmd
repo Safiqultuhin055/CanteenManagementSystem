@@ -1,0 +1,52 @@
+%% Canteen Management System — Entity Relationship Diagram
+%% Source: render to PNG via mermaid-cli or open docs/diagrams/view_diagrams.html
+
+erDiagram
+    %% ========== SECURITY ==========
+    ROLES ||--o{ USER_ROLES : assigns
+    USERS ||--o{ USER_ROLES : has
+    ROLES ||--o{ ROLE_PERMISSIONS : grants
+    PERMISSIONS ||--o{ ROLE_PERMISSIONS : includes
+    MENUS ||--o{ MENU_PERMISSIONS : requires
+    PERMISSIONS ||--o{ MENU_PERMISSIONS : linked
+    USERS ||--o{ PASSWORD_HISTORY : tracks
+    USERS ||--o{ USER_SESSIONS : opens
+    USERS ||--o{ LOGIN_HISTORY : logs
+
+    %% ========== ORGANIZATION ==========
+    DEPARTMENTS ||--o{ EMPLOYEES : contains
+    EMPLOYEES ||--o| EMPLOYEE_BALANCES : owns
+    EMPLOYEES ||--o{ EMPLOYEE_CARDS : holds
+    EMPLOYEES ||--o| USERS : links
+    EMPLOYEES ||--o{ BALANCE_ALLOCATIONS : receives
+    EMPLOYEES ||--o{ CREDIT_LIMITS : has
+    EMPLOYEES ||--o{ CARD_TRANSACTIONS : generates
+    EMPLOYEES ||--o{ EMPLOYEE_REQUESTS : submits
+
+    %% ========== INVENTORY ==========
+    FOOD_CATEGORIES ||--o{ MENU_ITEMS : groups
+    SUPPLIERS ||--o{ RAW_MATERIALS : supplies
+    RAW_MATERIALS ||--o| RAW_MATERIAL_STOCK : tracks
+    SUPPLIERS ||--o{ STOCK_PURCHASES : fulfills
+    STOCK_PURCHASES ||--o{ STOCK_PURCHASE_DETAILS : contains
+    RAW_MATERIALS ||--o{ STOCK_PURCHASE_DETAILS : purchased
+    MENU_ITEMS ||--o{ DAILY_FOOD_STOCK : prepared
+    DAILY_FOOD_STOCK ||--o{ FOOD_PREPARATION : consumes
+    RAW_MATERIALS ||--o{ FOOD_PREPARATION : used_in
+    MENU_ITEMS ||--o{ WASTE_RECORDS : wasted
+    RAW_MATERIALS ||--o{ WASTE_RECORDS : wasted
+
+    %% ========== SALES ==========
+    EMPLOYEE_CARDS ||--o{ ORDERS : pays
+    GUEST_CARDS ||--o{ ORDERS : pays
+    ORDERS ||--o{ ORDER_DETAILS : contains
+    MENU_ITEMS ||--o{ ORDER_DETAILS : item
+    DAILY_FOOD_STOCK ||--o{ ORDER_DETAILS : stock_ref
+    ORDERS ||--o| PAYMENTS : settled
+    ORDERS ||--o| KITCHEN_QUEUE : queued
+    ORDERS ||--o| DISTRIBUTION_QUEUE : distributed
+    ORDERS ||--o{ TOKEN_STATUS_HISTORY : history
+    EMPLOYEE_REQUESTS ||--o{ EMPLOYEE_REQUEST_ITEMS : lines
+    MENU_ITEMS ||--o{ EMPLOYEE_REQUEST_ITEMS : item
+    EMPLOYEE_REQUESTS ||--o{ EMPLOYEE_REQUEST_APPROVALS : approvals
+    USERS ||--o{ EMPLOYEE_REQUEST_APPROVALS : approves

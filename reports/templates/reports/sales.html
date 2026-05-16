@@ -1,0 +1,161 @@
+{% extends 'core/layout_app.html' %}
+
+{% block title %}Sales Report{% endblock %}
+
+{% block page_title %}
+<h1 class="h4 mb-0 fw-bold"><i class="bi bi-currency-exchange text-primary me-2"></i>Sales Report</h1>
+<small class="text-muted d-block">{{ from_date }} — {{ to_date }}</small>
+{% endblock %}
+
+{% block page_css %}
+<style>
+    .report-stat { border-radius: 14px; background: #fff; border: 1px solid #e2e8f0; padding: 1rem; }
+    .report-stat .val { font-size: 1.5rem; font-weight: 800; }
+</style>
+{% endblock %}
+
+{% block page_content %}
+<div class="d-flex flex-wrap gap-2 mb-3 align-items-end">
+    <form method="get" class="d-flex flex-wrap gap-2 align-items-end">
+        <div>
+            <label class="form-label small text-muted mb-0">From</label>
+            <input type="date" name="from" class="form-control form-control-sm" value="{{ from_date|date:'Y-m-d' }}">
+        </div>
+        <div>
+            <label class="form-label small text-muted mb-0">To</label>
+            <input type="date" name="to" class="form-control form-control-sm" value="{{ to_date|date:'Y-m-d' }}">
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+    </form>
+    <a href="{% url 'reports:reports_hub' %}" class="btn btn-outline-secondary btn-sm ms-auto"><i class="bi bi-arrow-left"></i> All reports</a>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="report-stat border-start border-4 border-primary">
+            <div class="small text-muted text-uppercase">Today revenue</div>
+            <div class="val text-primary">৳{{ revenue_today|floatformat:2 }}</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="report-stat border-start border-4 border-success">
+            <div class="small text-muted text-uppercase">Today orders</div>
+            <div class="val text-success">{{ orders_today }}</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="report-stat border-start border-4 border-warning">
+            <div class="small text-muted text-uppercase">Credit today</div>
+            <div class="val text-warning">৳{{ credit_today|floatformat:2 }}</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="report-stat border-start border-4 border-secondary">
+            <div class="small text-muted text-uppercase">Employees</div>
+            <div class="val">{{ employee_count }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white border-bottom fw-bold">Revenue trend</div>
+            <div class="card-body"><canvas id="salesTrendChart" height="100"></canvas></div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white border-bottom fw-bold">By department</div>
+            <div class="card-body"><canvas id="deptSalesChart"></canvas></div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom fw-bold">Top selling items</div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr><th>Item</th><th>Qty</th><th class="text-end">Revenue</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for row in top_items %}
+                        <tr>
+                            <td class="fw-semibold">{{ row.item_name }}</td>
+                            <td>{{ row.qty }}</td>
+                            <td class="text-end text-success fw-semibold">৳{{ row.revenue|floatformat:2 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="3" class="text-muted text-center py-4">No sales in this period</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom fw-bold">Recent orders</div>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead class="table-light">
+                        <tr><th>Order</th><th>Customer</th><th class="text-end">Total</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for o in recent_orders %}
+                        <tr>
+                            <td><span class="badge bg-secondary">#{{ o.token_number }}</span> {{ o.order_number }}</td>
+                            <td>{% if o.employee %}{{ o.employee.full_name }}{% else %}{{ o.customer_name|default:"Guest" }}{% endif %}</td>
+                            <td class="text-end fw-semibold">৳{{ o.total_amount|floatformat:2 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="3" class="text-muted text-center py-3">No orders</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const trendLabels = {{ trend_labels|safe }};
+const trendValues = {{ trend_values|safe }};
+const deptLabels = {{ dept_labels|safe }};
+const deptValues = {{ dept_values|safe }};
+
+new Chart(document.getElementById('salesTrendChart'), {
+    type: 'line',
+    data: {
+        labels: trendLabels,
+        datasets: [{
+            label: 'Revenue (৳)',
+            data: trendValues,
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.12)',
+            fill: true,
+            tension: 0.35,
+        }],
+    },
+    options: { responsive: true, plugins: { legend: { display: false } } },
+});
+
+new Chart(document.getElementById('deptSalesChart'), {
+    type: 'doughnut',
+    data: {
+        labels: deptLabels,
+        datasets: [{
+            data: deptValues,
+            backgroundColor: ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#64748b', '#ec4899'],
+        }],
+    },
+    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } } },
+});
+</script>
+{% endblock %}

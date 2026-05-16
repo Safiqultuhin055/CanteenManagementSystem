@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Token Display — Canteen</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #0f172a; color: #fff; overflow: hidden; margin: 0; }
+        .display-wrap { height: 100vh; display: grid; grid-template-columns: 1fr 1fr; }
+        .col-panel { padding: 1.25rem; display: flex; flex-direction: column; border-right: 1px solid #334155; }
+        .col-panel:last-child { border-right: none; }
+        .col-title {
+            text-align: center; font-size: clamp(1.5rem, 4vw, 2.75rem); font-weight: 800;
+            padding: 0.75rem; border-radius: 12px; margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.05em;
+        }
+        .title-prep { background: #fbbf24; color: #0f172a; }
+        .title-ready { background: #22c55e; color: #fff; }
+        .token-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; align-content: start; flex: 1; overflow-y: auto; }
+        .token-box {
+            font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 800; text-align: center;
+            padding: 0.5rem; border-radius: 12px; background: #1e293b; border: 2px solid #475569;
+        }
+        .token-box.ready { background: #16a34a; border-color: #bbf7d0; animation: pulse 1.2s ease-in-out infinite; }
+        .clock { position: fixed; top: 12px; right: 16px; font-size: 1.1rem; opacity: 0.7; }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(34,197,94,0.5); }
+            50% { transform: scale(1.04); box-shadow: 0 0 24px 8px rgba(34,197,94,0.25); }
+        }
+    </style>
+</head>
+<body>
+<span class="clock" id="clock"></span>
+<div class="display-wrap">
+    <div class="col-panel">
+        <div class="col-title title-prep"><i class="bi bi-fire me-2"></i>Preparing</div>
+        <div class="token-grid" id="grid-preparing"></div>
+    </div>
+    <div class="col-panel">
+        <div class="col-title title-ready"><i class="bi bi-check2-circle me-2"></i>Ready</div>
+        <div class="token-grid" id="grid-ready"></div>
+    </div>
+</div>
+<script>
+let previousReady = [];
+
+function tick() {
+    document.getElementById('clock').textContent = new Date().toLocaleTimeString('en-BD', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+tick();
+setInterval(tick, 1000);
+
+function fetchDisplay() {
+    fetch('{% url "distribution:api_get_tokens" %}')
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) renderDisplay(data.preparing || [], data.ready || []);
+        });
+}
+
+function renderDisplay(preparing, ready) {
+    document.getElementById('grid-preparing').innerHTML = preparing.length
+        ? preparing.map(t => '<div class="token-box">#' + t + '</div>').join('')
+        : '<div class="text-center text-secondary w-100 mt-5">—</div>';
+
+    const newReady = ready.filter(x => !previousReady.includes(x));
+    if (newReady.length) {
+        try {
+            new Audio('https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3').play();
+        } catch (e) {}
+    }
+    previousReady = ready;
+
+    document.getElementById('grid-ready').innerHTML = ready.length
+        ? ready.map(t => '<div class="token-box ready">#' + t + '</div>').join('')
+        : '<div class="text-center text-secondary w-100 mt-5">—</div>';
+}
+
+setInterval(fetchDisplay, 2000);
+fetchDisplay();
+</script>
+</body>
+</html>

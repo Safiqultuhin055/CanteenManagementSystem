@@ -1,0 +1,71 @@
+{% extends 'core/layout_app.html' %}
+{% block page_title %}Settings{% endblock %}
+
+{% block page_css %}
+<style>
+    .settings-hero {
+        background: linear-gradient(125deg, #1e293b 0%, #334155 50%, #475569 100%);
+        border-radius: 18px; color: #fff;
+        padding: 1.75rem 2rem; margin-bottom: 1.5rem;
+        box-shadow: 0 12px 40px rgba(30, 41, 59, 0.2);
+    }
+    .settings-section { margin-bottom: 2rem; }
+    .settings-section h3 {
+        font-size: 0.95rem; font-weight: 800; text-transform: uppercase;
+        letter-spacing: 0.06em; color: #64748b; margin-bottom: 0.35rem;
+    }
+    .settings-section p.section-desc { font-size: 0.85rem; color: #94a3b8; margin-bottom: 1rem; }
+    .settings-tile {
+        display: flex; align-items: center; gap: 1rem;
+        padding: 1rem 1.15rem;
+        background: var(--dash-surface);
+        border: 1px solid var(--dash-border);
+        border-radius: 14px;
+        text-decoration: none; color: var(--dash-text);
+        height: 100%;
+        transition: all 0.2s;
+        box-shadow: var(--dash-shadow);
+    }
+    .settings-tile:hover {
+        border-color: #3b82f6; color: #1d4ed8;
+        transform: translateY(-3px);
+        box-shadow: 0 12px 28px rgba(37, 99, 235, 0.12);
+    }
+    .settings-tile-icon {
+        width: 48px; height: 48px; border-radius: 12px;
+        background: linear-gradient(135deg, #eff6ff, #dbeafe);
+        color: #2563eb;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.35rem; flex-shrink: 0;
+    }
+    .settings-tile strong { display: block; font-size: 0.9rem; }
+    .settings-tile span { font-size: 0.75rem; color: #64748b; }
+</style>
+{% endblock %}
+
+{% block page_content %}
+<section class="settings-hero">
+    <h1 class="h4 fw-bold mb-2"><i class="bi bi-sliders me-2"></i>Settings</h1>
+    <p class="mb-0 opacity-90">Manage master data, security, menus, inventory, and system configuration. All forms use custom layouts in Django admin.</p>
+</section>
+
+{% for section in sections %}
+<div class="settings-section">
+    <h3>{{ section.title }}</h3>
+    <p class="section-desc">{{ section.description }}</p>
+    <div class="row g-3">
+        {% for item in section.items %}
+        <div class="col-sm-6 col-lg-4 col-xl-3">
+            <a href="{{ item.url }}" class="settings-tile">
+                <span class="settings-tile-icon"><i class="bi {{ item.icon }}"></i></span>
+                <span>
+                    <strong>{{ item.name }}</strong>
+                    <span>Custom admin form</span>
+                </span>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

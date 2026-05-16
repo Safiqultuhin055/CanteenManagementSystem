@@ -1,0 +1,171 @@
+{% load static %}
+<h2 id="architecture">System architecture</h2>
+<p>CanteenSys is a three-tier application: <strong>clients</strong> (browser, POS, kitchen TV, token display) → <strong>Django 6</strong> (business modules) → <strong>SQL Server</strong> (data, stored procedures, reporting views).</p>
+<div class="doc-callout">
+    <strong>Request path:</strong> User signs in → session + menu permissions → module view → ORM or stored procedure → <code>CanteenManagementDB</code> → response rendered with Bootstrap UI.
+</div>
+
+<h2 id="erd">Database ERD</h2>
+<p>Entity relationship diagram for <code>CanteenManagementDB</code> — 39 tables in six logical modules (Security, Organization, Inventory, Balance, Sales, Requests).</p>
+
+<div class="module-legend">
+    <span class="leg-security">Security</span>
+    <span class="leg-org">Organization</span>
+    <span class="leg-inv">Inventory</span>
+    <span class="leg-bal">Balance</span>
+    <span class="leg-sales">Sales</span>
+    <span class="leg-req">Requests</span>
+</div>
+
+{% if has_erd_png %}
+<figure class="diagram-panel">
+    <img src="{% static 'docs/erd_diagram.png' %}" alt="Canteen Management System ERD" class="diagram-img" loading="lazy">
+    <figcaption class="diagram-caption">
+        <span><i class="bi bi-diagram-2 me-1"></i>Official ERD — all tables and relationships</span>
+        <a href="{% static 'docs/erd_diagram.png' %}" target="_blank" class="text-primary">Open full size</a>
+    </figcaption>
+</figure>
+{% endif %}
+
+{% if mermaid_erd %}
+<figure class="diagram-panel">
+    <pre class="mermaid">{{ mermaid_erd }}</pre>
+    <figcaption class="diagram-caption">
+        <span>Interactive ERD (Mermaid — source: <code>docs/diagrams/erd.mmd</code>)</span>
+    </figcaption>
+</figure>
+{% endif %}
+
+<h3>ERD module summary</h3>
+<table class="table doc-table table-bordered">
+    <thead><tr><th>Module</th><th>Key tables</th><th>Purpose</th></tr></thead>
+    <tbody>
+        <tr><td><span class="leg-security">Security</span></td><td>users, roles, permissions, menus, login_history</td><td>Auth, RBAC, navigation</td></tr>
+        <tr><td><span class="leg-org">Organization</span></td><td>departments, employees, employee_cards, employee_balances</td><td>Staff &amp; RFID cards</td></tr>
+        <tr><td><span class="leg-inv">Inventory</span></td><td>menu_items, daily_food_stock, raw_materials, waste_records</td><td>Menu &amp; stock</td></tr>
+        <tr><td><span class="leg-bal">Balance</span></td><td>balance_allocations, card_transactions, credit_limits</td><td>Advance &amp; credit ledger</td></tr>
+        <tr><td><span class="leg-sales">Sales</span></td><td>orders, order_details, payments, kitchen_queue, distribution_queue</td><td>POS → kitchen → pickup</td></tr>
+        <tr><td><span class="leg-req">Requests</span></td><td>employee_requests, employee_request_items, approvals</td><td>Pre-orders &amp; workflow</td></tr>
+    </tbody>
+</table>
+
+<h2 id="flow">Overall functional flow</h2>
+<p>End-to-end flow from client devices through Django modules to SQL Server, including POS → Kitchen → Distribution.</p>
+
+{% if has_flow_png %}
+<figure class="diagram-panel">
+    <img src="{% static 'docs/overall_functional_flow.png' %}" alt="Canteen Management System functional flow" class="diagram-img" loading="lazy">
+    <figcaption class="diagram-caption">
+        <span><i class="bi bi-arrow-repeat me-1"></i>Official functional flowchart</span>
+        <a href="{% static 'docs/overall_functional_flow.png' %}" target="_blank" class="text-primary">Open full size</a>
+    </figcaption>
+</figure>
+{% endif %}
+
+{% if mermaid_flow %}
+<figure class="diagram-panel">
+    <pre class="mermaid">{{ mermaid_flow }}</pre>
+    <figcaption class="diagram-caption">
+        <span>Interactive flow (Mermaid — source: <code>docs/diagrams/overall_functional_flow.mmd</code>)</span>
+    </figcaption>
+</figure>
+{% endif %}
+
+<h3>Operational sequence</h3>
+<ol>
+    <li><strong>Login</strong> — <code>usp_ValidateUserLogin</code>, password check, session + <code>login_history</code>.</li>
+    <li><strong>POS</strong> — RFID scan → <code>usp_ValidateEmployeeCard</code> → cart → <code>usp_ProcessEmployeeSale</code>.</li>
+    <li><strong>Kitchen</strong> — order in <code>kitchen_queue</code>; status PENDING → PREPARING → READY.</li>
+    <li><strong>Distribution</strong> — token display; verify → <code>usp_CompleteDistribution</code> → PICKED_UP.</li>
+    <li><strong>Reports</strong> — read from SQL views (<code>vw_*</code>) for sales and inventory.</li>
+</ol>
+
+<h2 id="stack">Technology stack</h2>
+<table class="table doc-table table-bordered">
+    <thead><tr><th>Layer</th><th>Technology</th></tr></thead>
+    <tbody>
+        <tr><td>Backend</td><td>Django 6, Python 3.x</td></tr>
+        <tr><td>Database</td><td>Microsoft SQL Server 2019+ / LocalDB</td></tr>
+        <tr><td>DB driver</td><td><code>mssql-django</code>, ODBC Driver 17</td></tr>
+        <tr><td>Frontend</td><td>Bootstrap 5, Bootstrap Icons, Plus Jakarta Sans</td></tr>
+        <tr><td>Auth</td><td>Custom <code>users.User</code>, SP-backed login audit</td></tr>
+        <tr><td>Admin</td><td>Django Admin with custom ModelForms + Settings hub</td></tr>
+    </tbody>
+</table>
+
+<h2 id="database">Database scripts</h2>
+<p>Database: <code>CanteenManagementDB</code>. Soft delete (<code>is_deleted</code>), audit columns, money as <code>DECIMAL(18,2)</code>.</p>
+<h3>Execution order</h3>
+<ol>
+    <li><code>database/01_create_database.sql</code> … <code>09_seed_data.sql</code></li>
+    <li><code>10_stored_procedures_part1.sql</code> — <code>part3.sql</code></li>
+    <li><code>11_views.sql</code>, <code>11_views_part2.sql</code></li>
+    <li><code>13_menu_permissions_and_help.sql</code>, <code>15_settings_menu_children.sql</code></li>
+    <li>Optional: <code>Speed_data.sql</code></li>
+</ol>
+<div class="doc-callout warning"><strong>Note:</strong> Django models use <code>managed = False</code> — schema is owned by SQL scripts.</div>
+
+<h2 id="modules">Database modules (39 tables)</h2>
+<table class="table doc-table table-bordered table-sm">
+    <thead><tr><th>Group</th><th>Tables</th></tr></thead>
+    <tbody>
+        <tr><td>Security (10)</td><td>roles, permissions, menus, menu_permissions, role_permissions, users, user_roles, password_history, user_sessions, login_history</td></tr>
+        <tr><td>Organization (3)</td><td>departments, employees, employee_cards</td></tr>
+        <tr><td>Inventory (9)</td><td>food_categories, menu_items, suppliers, raw_materials, raw_material_stock, stock_purchases, stock_purchase_details, daily_food_stock, waste_records</td></tr>
+        <tr><td>Balance (5)</td><td>employee_balances, balance_allocations, monthly_allowances, credit_limits, card_transactions</td></tr>
+        <tr><td>Sales (7)</td><td>guest_cards, orders, order_details, payments, kitchen_queue, distribution_queue, token_status_history</td></tr>
+        <tr><td>Requests (3)</td><td>employee_requests, employee_request_items, employee_request_approvals</td></tr>
+        <tr><td>System (2)</td><td>system_settings, audit_logs</td></tr>
+    </tbody>
+</table>
+
+<h2 id="django">Django applications</h2>
+<div class="module-grid">
+    <div class="module-chip"><i class="bi bi-person-gear"></i><strong>users</strong><span>Auth, roles, menus, SP login</span></div>
+    <div class="module-chip"><i class="bi bi-grid"></i><strong>core</strong><span>Dashboard, help, settings hub</span></div>
+    <div class="module-chip"><i class="bi bi-people"></i><strong>employee</strong><span>Departments, staff, cards</span></div>
+    <div class="module-chip"><i class="bi bi-egg-fried"></i><strong>inventory</strong><span>Menu, stock, waste</span></div>
+    <div class="module-chip"><i class="bi bi-wallet2"></i><strong>balance</strong><span>Allocations, ledger</span></div>
+    <div class="module-chip"><i class="bi bi-cart-check"></i><strong>pos</strong><span>Orders, payments</span></div>
+    <div class="module-chip"><i class="bi bi-fire"></i><strong>kitchen</strong><span>KDS queue</span></div>
+    <div class="module-chip"><i class="bi bi-box-seam"></i><strong>distribution</strong><span>Token handover</span></div>
+    <div class="module-chip"><i class="bi bi-graph-up"></i><strong>reports</strong><span>Analytics views</span></div>
+</div>
+
+<h2 id="env">Environment (.env)</h2>
+<pre class="doc-pre">DB_NAME=CanteenManagementDB
+DB_HOST=(localdb)\MSSQLLocalDB
+DB_USER=
+DB_PASSWORD=
+# Trusted_Connection in settings OPTIONS</pre>
+
+<h2 id="deploy">Run and deploy</h2>
+<div class="step-card"><span class="step-num">1</span> <code>python -m venv venv</code> → <code>pip install -r requirements.txt</code></div>
+<div class="step-card"><span class="step-num">2</span> Configure <code>.env</code> and run SQL scripts in SSMS.</div>
+<div class="step-card"><span class="step-num">3</span> <code>python manage.py runserver 127.0.0.1:8000</code></div>
+<div class="step-card"><span class="step-num">4</span> Login: <code>/users/login/</code> — Settings: <code>/settings/</code> — Technical doc: <code>/help/technical/</code></div>
+
+<h2 id="security">Security</h2>
+<ul>
+    <li>Menus: <code>users.permissions.get_menu_tree_for_user()</code></li>
+    <li>Technical docs: <code>TECH_DOC_VIEW</code> or admin role</li>
+    <li>Login lockout via <code>usp_RecordLoginFailure</code> + <code>system_settings</code></li>
+    <li>Password change: <code>usp_ChangePassword</code> + <code>password_history</code></li>
+    <li>Production: <code>DEBUG=False</code>, HTTPS, strong <code>SECRET_KEY</code></li>
+</ul>
+
+<h2 id="scripts">Key stored procedures</h2>
+<table class="table doc-table table-bordered">
+    <thead><tr><th>Procedure</th><th>Purpose</th></tr></thead>
+    <tbody>
+        <tr><td><code>usp_ValidateUserLogin</code></td><td>Pre-login account check</td></tr>
+        <tr><td><code>usp_RecordLoginSuccess</code> / <code>Failure</code></td><td>Session &amp; lockout audit</td></tr>
+        <tr><td><code>usp_ChangePassword</code></td><td>Password update + history</td></tr>
+        <tr><td><code>usp_ValidateEmployeeCard</code></td><td>RFID validation at POS</td></tr>
+        <tr><td><code>usp_ProcessEmployeeSale</code></td><td>POS checkout transaction</td></tr>
+        <tr><td><code>usp_UpdateKitchenStatus</code></td><td>Kitchen queue updates</td></tr>
+        <tr><td><code>usp_CompleteDistribution</code></td><td>Token handover complete</td></tr>
+        <tr><td><code>usp_AllocateBalance</code></td><td>Balance top-up / allowance</td></tr>
+    </tbody>
+</table>
+<p>Full specification: <code>STEP1_DATABASE_DESIGN.md</code> · Diagrams page: <a href="{% url 'core:help_diagrams' %}">System diagrams</a></p>

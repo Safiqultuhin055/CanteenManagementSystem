@@ -1,0 +1,414 @@
+{% extends 'core/layout_app.html' %}
+{% block page_title %}{% endblock %}
+
+{% block page_css %}
+<style>
+    .dash-hero {
+        background: linear-gradient(125deg, #0c4a6e 0%, #1d4ed8 42%, #6366f1 78%, #8b5cf6 100%);
+        border-radius: 20px;
+        padding: 2rem 2.25rem;
+        color: #fff;
+        margin-bottom: 1.75rem;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 20px 50px rgba(29, 78, 216, 0.28);
+    }
+    .dash-hero::before,
+    .dash-hero::after {
+        content: '';
+        position: absolute;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.06);
+    }
+    .dash-hero::before { width: 320px; height: 320px; top: -55%; right: 8%; }
+    .dash-hero::after { width: 180px; height: 180px; bottom: -40%; left: 5%; }
+    .dash-hero-content { position: relative; z-index: 1; }
+    .hero-pill {
+        display: inline-flex; align-items: center; gap: 0.4rem;
+        background: rgba(255,255,255,0.15);
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 999px; padding: 0.35rem 0.85rem;
+        font-size: 0.75rem; font-weight: 600; backdrop-filter: blur(8px);
+    }
+    .hero-stat-mini {
+        text-align: center; padding: 0.75rem 1rem;
+        background: rgba(255,255,255,0.12);
+        border-radius: 14px; border: 1px solid rgba(255,255,255,0.15);
+        min-width: 100px;
+    }
+    .hero-stat-mini .val { font-size: 1.35rem; font-weight: 800; line-height: 1.2; }
+    .hero-stat-mini .lbl { font-size: 0.65rem; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    .stat-card {
+        background: var(--dash-surface);
+        border-radius: 18px;
+        border: 1px solid var(--dash-border);
+        padding: 1.35rem 1.4rem;
+        height: 100%;
+        transition: transform 0.22s ease, box-shadow 0.22s ease;
+        box-shadow: var(--dash-shadow);
+        position: relative;
+        overflow: hidden;
+    }
+    .stat-card::after {
+        content: '';
+        position: absolute;
+        top: 0; right: 0;
+        width: 80px; height: 80px;
+        border-radius: 0 18px 0 100%;
+        opacity: 0.12;
+    }
+    .stat-card.blue::after { background: #2563eb; }
+    .stat-card.green::after { background: #059669; }
+    .stat-card.amber::after { background: #d97706; }
+    .stat-card.purple::after { background: #7c3aed; }
+    .stat-card.rose::after { background: #e11d48; }
+    .stat-card.cyan::after { background: #0891b2; }
+    .stat-card:hover { transform: translateY(-5px); box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12); }
+    .stat-icon {
+        width: 50px; height: 50px; border-radius: 14px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.4rem; margin-bottom: 1rem;
+    }
+    .stat-icon.blue { background: linear-gradient(135deg, #dbeafe, #bfdbfe); color: #1d4ed8; }
+    .stat-icon.green { background: linear-gradient(135deg, #d1fae5, #a7f3d0); color: #047857; }
+    .stat-icon.amber { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #b45309; }
+    .stat-icon.purple { background: linear-gradient(135deg, #ede9fe, #ddd6fe); color: #6d28d9; }
+    .stat-icon.rose { background: linear-gradient(135deg, #ffe4e6, #fecdd3); color: #be123c; }
+    .stat-icon.cyan { background: linear-gradient(135deg, #cffafe, #a5f3fc); color: #0e7490; }
+    .stat-value { font-size: 1.85rem; font-weight: 800; color: var(--dash-text); letter-spacing: -0.02em; }
+    .stat-label { font-size: 0.78rem; font-weight: 600; color: var(--dash-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-trend { font-size: 0.72rem; color: var(--dash-muted); margin-top: 0.35rem; }
+
+    .quick-card {
+        display: flex; align-items: center; gap: 1rem;
+        padding: 1.2rem 1.3rem;
+        background: var(--dash-surface);
+        border: 1px solid var(--dash-border);
+        border-radius: 16px;
+        text-decoration: none; color: var(--dash-text);
+        transition: all 0.22s; box-shadow: var(--dash-shadow); height: 100%;
+    }
+    .quick-card:hover { border-color: #93c5fd; color: #1d4ed8; transform: translateY(-3px); box-shadow: 0 12px 28px rgba(37, 99, 235, 0.12); }
+    .quick-card-icon {
+        width: 54px; height: 54px; border-radius: 14px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.5rem; flex-shrink: 0; color: #fff;
+    }
+    .quick-card.pos .quick-card-icon { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+    .quick-card.kitchen .quick-card-icon { background: linear-gradient(135deg, #f59e0b, #c2410c); }
+    .quick-card.dist .quick-card-icon { background: linear-gradient(135deg, #10b981, #047857); }
+    .quick-card.reports .quick-card-icon { background: linear-gradient(135deg, #a855f7, #6d28d9); }
+
+    .panel {
+        background: var(--dash-surface);
+        border-radius: 18px;
+        border: 1px solid var(--dash-border);
+        box-shadow: var(--dash-shadow);
+        overflow: hidden;
+    }
+    .panel-header {
+        padding: 1.1rem 1.4rem;
+        border-bottom: 1px solid var(--dash-border);
+        font-weight: 700; font-size: 0.95rem;
+        display: flex; align-items: center; justify-content: space-between;
+        background: linear-gradient(180deg, #fafbfc, #fff);
+    }
+    .orders-table { font-size: 0.85rem; margin: 0; }
+    .orders-table th {
+        font-weight: 600; color: var(--dash-muted);
+        text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.04em;
+        border-bottom-width: 1px; padding: 0.75rem 1.25rem;
+    }
+    .orders-table td { padding: 0.85rem 1.25rem; vertical-align: middle; }
+    .orders-table tbody tr:hover { background: #f8fafc; }
+    .badge-status {
+        font-size: 0.68rem; font-weight: 700; padding: 0.3rem 0.55rem;
+        border-radius: 6px; text-transform: uppercase;
+    }
+    .badge-status.placed { background: #dbeafe; color: #1d4ed8; }
+    .badge-status.ready { background: #d1fae5; color: #047857; }
+    .badge-status.pending { background: #fef3c7; color: #b45309; }
+
+    .dept-bar-row { margin-bottom: 0.85rem; }
+    .dept-bar-label { display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 0.35rem; }
+    .dept-bar-track { height: 8px; background: #e2e8f0; border-radius: 999px; overflow: hidden; }
+    .dept-bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #3b82f6, #6366f1); }
+
+    .module-tile {
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        padding: 1rem 0.5rem; border-radius: 12px;
+        border: 1px solid var(--dash-border); background: #f8fafc;
+        text-decoration: none; color: var(--dash-text);
+        font-size: 0.78rem; font-weight: 600; min-height: 92px;
+        transition: all 0.2s;
+    }
+    .module-tile:hover { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; transform: scale(1.02); }
+    .module-tile i { font-size: 1.4rem; margin-bottom: 0.35rem; color: #3b82f6; }
+
+    .workflow-step {
+        display: flex; align-items: center; gap: 0.85rem;
+        padding: 0.65rem 0; font-size: 0.88rem; color: var(--dash-muted);
+        border-bottom: 1px dashed var(--dash-border);
+    }
+    .workflow-step:last-child { border-bottom: none; }
+    .workflow-num {
+        width: 32px; height: 32px; border-radius: 10px;
+        background: linear-gradient(135deg, #eff6ff, #dbeafe);
+        color: #1d4ed8; font-weight: 800; font-size: 0.8rem;
+        display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+
+    .help-banner {
+        background: linear-gradient(95deg, #f0f9ff 0%, #eef2ff 50%, #faf5ff 100%);
+        border: 1px solid #c7d2fe;
+        border-radius: 18px;
+        padding: 1.35rem 1.6rem;
+    }
+    .live-dot {
+        width: 8px; height: 8px; border-radius: 50%;
+        background: #22c55e; display: inline-block;
+        box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.35);
+        animation: pulse-dot 2s infinite;
+    }
+    @keyframes pulse-dot {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.6; }
+    }
+</style>
+{% endblock %}
+
+{% block page_content %}
+{% if db_error %}
+<div class="alert alert-danger shadow-sm mb-3 border-0 rounded-3">
+    <strong><i class="bi bi-database-x me-2"></i>Database not connected.</strong> {{ db_error }}
+</div>
+{% elif stats_empty %}
+<div class="alert alert-warning shadow-sm mb-3 border-0 rounded-3">
+    <strong><i class="bi bi-exclamation-triangle me-2"></i>No data found.</strong>
+    Run <code>database/09_seed_data.sql</code> in SQL Server, then refresh.
+</div>
+{% endif %}
+
+<section class="dash-hero">
+    <div class="dash-hero-content">
+        <div class="row align-items-center g-4">
+            <div class="col-lg-7">
+                <span class="hero-pill mb-3"><span class="live-dot"></span> Live data &middot; {{ today|date:"l, F j, Y" }}</span>
+                <h1 class="fw-bold mb-2 display-6">{{ greeting }}, {{ request.user.first_name|default:request.user.username }}!</h1>
+                <p class="mb-0 opacity-90 pe-lg-4">Canteen operations at a glance — sales, kitchen queue, cards, and balances from your database.</p>
+            </div>
+            <div class="col-lg-5">
+                <div class="d-flex flex-wrap gap-2 justify-content-lg-end">
+                    <div class="hero-stat-mini">
+                        <div class="val">৳{{ sales_today|floatformat:0 }}</div>
+                        <div class="lbl">Sales today</div>
+                    </div>
+                    <div class="hero-stat-mini">
+                        <div class="val">{{ order_count_today }}</div>
+                        <div class="lbl">Orders</div>
+                    </div>
+                    <div class="hero-stat-mini">
+                        <div class="val">{{ kitchen_pending }}</div>
+                        <div class="lbl">Kitchen</div>
+                    </div>
+                </div>
+                <div class="text-lg-end mt-3">
+                    <a href="{% url 'pos:dashboard' %}" class="btn btn-light btn-lg fw-bold shadow px-4 rounded-3">
+                        <i class="bi bi-lightning-charge-fill text-warning me-2"></i>Open POS
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-xl-2">
+        <div class="stat-card blue">
+            <div class="stat-icon blue"><i class="bi bi-people-fill"></i></div>
+            <p class="stat-label mb-1">Employees</p>
+            <p class="stat-value mb-0">{{ employee_count }}</p>
+            <p class="stat-trend">{{ active_employee_count }} active</p>
+        </div>
+    </div>
+    <div class="col-6 col-xl-2">
+        <div class="stat-card green">
+            <div class="stat-icon green"><i class="bi bi-cup-hot-fill"></i></div>
+            <p class="stat-label mb-1">Menu Items</p>
+            <p class="stat-value mb-0">{{ menu_item_count }}</p>
+            <p class="stat-trend">Available today</p>
+        </div>
+    </div>
+    <div class="col-6 col-xl-2">
+        <div class="stat-card amber">
+            <div class="stat-icon amber"><i class="bi bi-receipt-cutoff"></i></div>
+            <p class="stat-label mb-1">Orders Today</p>
+            <p class="stat-value mb-0">{{ order_count_today }}</p>
+            <p class="stat-trend">৳{{ sales_today|floatformat:2 }} revenue</p>
+        </div>
+    </div>
+    <div class="col-6 col-xl-2">
+        <div class="stat-card purple">
+            <div class="stat-icon purple"><i class="bi bi-credit-card-2-front"></i></div>
+            <p class="stat-label mb-1">Active Cards</p>
+            <p class="stat-value mb-0">{{ card_count }}</p>
+            <p class="stat-trend">{{ department_count }} departments</p>
+        </div>
+    </div>
+    <div class="col-6 col-xl-2">
+        <div class="stat-card rose">
+            <div class="stat-icon rose"><i class="bi bi-fire"></i></div>
+            <p class="stat-label mb-1">Kitchen Queue</p>
+            <p class="stat-value mb-0">{{ kitchen_pending }}</p>
+            <p class="stat-trend">{{ distribution_pending }} awaiting pickup</p>
+        </div>
+    </div>
+    <div class="col-6 col-xl-2">
+        <div class="stat-card cyan">
+            <div class="stat-icon cyan"><i class="bi bi-wallet2"></i></div>
+            <p class="stat-label mb-1">Advance Balance</p>
+            <p class="stat-value mb-0" style="font-size:1.35rem;">৳{{ total_advance_balance|floatformat:0 }}</p>
+            <p class="stat-trend">৳{{ total_spent_all|floatformat:0 }} total spent</p>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6 col-xl-3">
+        <a href="{% url 'pos:dashboard' %}" class="quick-card pos">
+            <span class="quick-card-icon"><i class="bi bi-cart-check"></i></span>
+            <span><span class="fw-bold d-block">Point of Sale</span><small class="text-muted">RFID scan &amp; checkout</small></span>
+        </a>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <a href="{% url 'kitchen:kds_dashboard' %}" class="quick-card kitchen">
+            <span class="quick-card-icon"><i class="bi bi-fire"></i></span>
+            <span><span class="fw-bold d-block">Kitchen</span><small class="text-muted">{{ kitchen_pending }} in queue</small></span>
+        </a>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <a href="{% url 'distribution:distribution_dashboard' %}" class="quick-card dist">
+            <span class="quick-card-icon"><i class="bi bi-box-seam"></i></span>
+            <span><span class="fw-bold d-block">Distribution</span><small class="text-muted">Token handover</small></span>
+        </a>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <a href="{% url 'reports:sales_report' %}" class="quick-card reports">
+            <span class="quick-card-icon"><i class="bi bi-graph-up-arrow"></i></span>
+            <span><span class="fw-bold d-block">Reports</span><small class="text-muted">Sales analytics</small></span>
+        </a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-8">
+        <div class="panel h-100">
+            <div class="panel-header">
+                <span><i class="bi bi-clock-history text-primary me-2"></i>Recent orders</span>
+                <a href="/admin/pos/order/" class="btn btn-sm btn-outline-primary rounded-pill">View all</a>
+            </div>
+            {% if recent_orders %}
+            <div class="table-responsive">
+                <table class="table orders-table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Order</th>
+                            <th>Customer</th>
+                            <th>Token</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for o in recent_orders %}
+                        <tr>
+                            <td class="fw-semibold">{{ o.order_number }}</td>
+                            <td>{{ o.employee.full_name|default:o.customer_name|default:"—" }}</td>
+                            <td><span class="badge bg-dark rounded-pill">#{{ o.token_number }}</span></td>
+                            <td class="fw-semibold text-success">৳{{ o.total_amount|floatformat:2 }}</td>
+                            <td>
+                                <span class="badge-status {% if o.kitchen_status == 'READY' %}ready{% elif o.kitchen_status == 'PENDING' %}pending{% else %}placed{% endif %}">
+                                    {{ o.kitchen_status|default:o.order_status }}
+                                </span>
+                            </td>
+                            <td class="text-muted">{{ o.order_time|date:"M j, H:i" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="p-4 text-center text-muted">
+                <i class="bi bi-inbox display-6 d-block mb-2 opacity-50"></i>
+                No orders yet. Start from <a href="{% url 'pos:dashboard' %}">POS</a>.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="panel h-100 mb-3">
+            <div class="panel-header"><i class="bi bi-building text-primary me-2"></i>Staff by department</div>
+            <div class="p-3 px-4">
+                {% if dept_breakdown %}
+                    {% with max_count=dept_breakdown.0.count %}
+                    {% for d in dept_breakdown %}
+                    <div class="dept-bar-row">
+                        <div class="dept-bar-label">
+                            <span class="fw-semibold">{{ d.name }}</span>
+                            <span class="text-muted">{{ d.count }}</span>
+                        </div>
+                        <div class="dept-bar-track">
+                            <div class="dept-bar-fill" style="width: {% widthratio d.count max_count 100 %}%;"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% endwith %}
+                {% else %}
+                    <p class="text-muted small mb-0">No employee data.</p>
+                {% endif %}
+            </div>
+        </div>
+        <div class="panel">
+            <div class="panel-header"><i class="bi bi-diagram-3 text-primary me-2"></i>Workflow</div>
+            <div class="p-3 px-4">
+                <p class="workflow-step"><span class="workflow-num">1</span> Scan card at <strong>POS</strong></p>
+                <p class="workflow-step"><span class="workflow-num">2</span> Order in <strong>Kitchen</strong></p>
+                <p class="workflow-step"><span class="workflow-num">3</span> Mark <strong>Ready</strong></p>
+                <p class="workflow-step mb-0"><span class="workflow-num">4</span> <strong>Distribution</strong> handover</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if user_is_admin %}
+<div class="panel mb-4">
+    <div class="panel-header"><i class="bi bi-grid text-primary me-2"></i>Admin modules</div>
+    <div class="p-3">
+        <div class="row g-2">
+            <div class="col-4 col-md-2"><a href="/admin/employee/employee/" class="module-tile"><i class="bi bi-people"></i>Employees</a></div>
+            <div class="col-4 col-md-2"><a href="/admin/employee/employeecard/" class="module-tile"><i class="bi bi-credit-card"></i>Cards</a></div>
+            <div class="col-4 col-md-2"><a href="/admin/balance/employeebalance/" class="module-tile"><i class="bi bi-wallet2"></i>Balance</a></div>
+            <div class="col-4 col-md-2"><a href="/admin/inventory/menuitem/" class="module-tile"><i class="bi bi-egg-fried"></i>Menu</a></div>
+            <div class="col-4 col-md-2"><a href="/admin/pos/order/" class="module-tile"><i class="bi bi-receipt"></i>Orders</a></div>
+            <div class="col-4 col-md-2"><a href="/admin/users/user/" class="module-tile"><i class="bi bi-person-gear"></i>Users</a></div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="help-banner d-flex flex-wrap align-items-center justify-content-between gap-3">
+    <div>
+        <h6 class="fw-bold mb-1"><i class="bi bi-info-circle text-primary me-2"></i>Need help?</h6>
+        <p class="text-muted small mb-0">User manual, ERD diagrams, and technical documentation.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a href="{% url 'core:help_user_manual' %}" class="btn btn-primary btn-sm rounded-pill px-3">User Manual</a>
+        <a href="{% url 'core:help_diagrams' %}" class="btn btn-outline-primary btn-sm rounded-pill px-3">Diagrams</a>
+        {% if user_is_admin or 'TECH_DOC_VIEW' in user_permission_codes %}
+        <a href="{% url 'core:help_technical' %}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">Technical</a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

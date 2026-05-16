@@ -1,0 +1,63 @@
+<h2 id="overview">Overview</h2>
+<p>CanteenSys manages employee canteen sales from card scan through kitchen preparation to token distribution. Each role sees only the menus assigned by your administrator.</p>
+
+<div class="module-grid mb-3">
+    <div class="module-chip"><i class="bi bi-speedometer2"></i><strong>Dashboard</strong><span>KPIs and quick links</span></div>
+    <div class="module-chip"><i class="bi bi-cart-check"></i><strong>POS</strong><span>RFID checkout</span></div>
+    <div class="module-chip"><i class="bi bi-fire"></i><strong>Kitchen</strong><span>Order queue (KDS)</span></div>
+    <div class="module-chip"><i class="bi bi-box-seam"></i><strong>Distribution</strong><span>Token handover</span></div>
+    <div class="module-chip"><i class="bi bi-wallet2"></i><strong>Balance</strong><span>Advance and credit</span></div>
+    <div class="module-chip"><i class="bi bi-graph-up"></i><strong>Reports</strong><span>Sales analytics</span></div>
+</div>
+
+<h2 id="login">Sign in</h2>
+<div class="step-card"><span class="step-num">1</span> Open <code>/users/login/</code> in your browser.</div>
+<div class="step-card"><span class="step-num">2</span> Enter your <strong>username</strong> and <strong>password</strong>.</div>
+<div class="step-card"><span class="step-num">3</span> After sign out you return to the login page; sign in again to continue.</div>
+<div class="doc-callout"><strong>Seed admin:</strong> <code>superadmin</code> — change the default password before production use.</div>
+
+<h2 id="dashboard">Dashboard</h2>
+<p>The home screen shows live counts: employees, menu items, orders today, sales revenue, kitchen queue, and advance balance. Use quick-action tiles for POS, Kitchen, Distribution, and Reports.</p>
+
+<h2 id="pos">Point of Sale (POS)</h2>
+<h3>Employee sale</h3>
+<ul>
+    <li>Scan or enter the employee RFID card number.</li>
+    <li>Confirm employee name and available balance.</li>
+    <li>Add menu items by category; adjust quantities.</li>
+    <li>Complete checkout — a token number is generated for kitchen and distribution.</li>
+</ul>
+<h3>Guest / cash</h3>
+<p>Use guest card or cash payment as configured. Guest cards track deposit and loaded balance separately.</p>
+
+<h2 id="kitchen">Kitchen (KDS)</h2>
+<ul>
+    <li>New orders appear with token number and line items.</li>
+    <li>Mark orders <strong>Preparing</strong> then <strong>Ready</strong>.</li>
+    <li>Ready orders appear in the distribution queue.</li>
+</ul>
+
+<h2 id="distribution">Distribution</h2>
+<ul>
+    <li>Counter display lists tokens waiting for pickup.</li>
+    <li>Verify token and employee before handover.</li>
+    <li>Mark <strong>Completed</strong> to close the order.</li>
+</ul>
+
+<h2 id="balance">Balance and cards</h2>
+<p>Each employee has advance balance and optional credit. Allocations are managed under Admin → Balance. Cards must be <strong>ACTIVE</strong> for POS.</p>
+
+<h2 id="admin">Admin tasks</h2>
+<table class="table doc-table table-bordered">
+    <thead><tr><th>Task</th><th>Path</th></tr></thead>
+    <tbody>
+        <tr><td>Users and roles</td><td><code>/admin/users/</code></td></tr>
+        <tr><td>Menus and permissions</td><td><code>/admin/users/menu/</code></td></tr>
+        <tr><td>Employees and cards</td><td><code>/admin/employee/</code></td></tr>
+        <tr><td>Menu and inventory</td><td><code>/admin/inventory/</code></td></tr>
+        <tr><td>Orders</td><td><code>/admin/pos/order/</code></td></tr>
+    </tbody>
+</table>
+
+<h2 id="support">Support</h2>
+<p>Admins: see <a href="{% url 'core:help_technical' %}">Technical Documentation</a>. Process diagrams: <a href="{% url 'core:help_diagrams' %}">Diagrams</a>.</p>

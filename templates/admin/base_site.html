@@ -1,0 +1,77 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | CanteenSys Admin{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<style>
+    :root {
+        --cms-primary: #2563eb;
+        --cms-primary-dark: #1d4ed8;
+        --cms-header: #0f172a;
+    }
+    body, input, select, textarea, .button {
+        font-family: 'Plus Jakarta Sans', system-ui, sans-serif !important;
+    }
+    #header {
+        background: var(--cms-header) !important;
+        padding: 12px 20px !important;
+    }
+    #branding h1, #branding h1 a:link, #branding h1 a:visited {
+        color: #fff !important;
+        font-weight: 700 !important;
+    }
+    .module h2, .module caption, #content h1, .inline-group h2 {
+        background: linear-gradient(90deg, var(--cms-primary), #4f46e5) !important;
+        color: #fff !important;
+    }
+  .cms-input, .cms-select, input[type=text], input[type=password],
+    input[type=email], input[type=url], input[type=number], input[type=date],
+    input[type=datetime-local], textarea, select {
+        border-radius: 8px !important;
+        border: 1px solid #cbd5e1 !important;
+        padding: 8px 12px !important;
+        min-height: 38px;
+    }
+    input:focus, select:focus, textarea:focus {
+        border-color: var(--cms-primary) !important;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+        outline: none !important;
+    }
+    .submit-row input, .button, input[type=submit].default {
+        border-radius: 8px !important;
+        background: var(--cms-primary) !important;
+        border: none !important;
+        padding: 10px 20px !important;
+        font-weight: 600 !important;
+    }
+    .submit-row input:hover, .button:hover {
+        background: var(--cms-primary-dark) !important;
+    }
+    #content-main .module {
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+    }
+    .form-row { padding: 12px 14px !important; }
+    div.breadcrumbs {
+        background: #f1f5f9 !important;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    div.breadcrumbs a { color: var(--cms-primary) !important; }
+    #user-tools a { color: #e2e8f0 !important; }
+    .cms-back-settings {
+        display: inline-flex; align-items: center; gap: 6px;
+        margin-left: 16px; color: #93c5fd !important; font-size: 13px;
+    }
+</style>
+{% endblock %}
+
+{% block branding %}
+<h1 id="site-name"><a href="{% url 'admin:index' %}">CanteenSys Administration</a></h1>
+<a class="cms-back-settings" href="/settings/"><i class="bi bi-sliders"></i> Settings hub</a>
+{% endblock %}
