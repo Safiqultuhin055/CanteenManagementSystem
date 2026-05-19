@@ -1,0 +1,88 @@
+{% extends 'core/layout_app.html' %}
+{% load cms_extras %}
+
+{% block title %}User-wise Sales{% endblock %}
+
+{% block page_title %}
+<h1 class="h4 mb-0 fw-bold"><i class="bi bi-person-lines-fill text-primary me-2"></i>User-wise Sales</h1>
+<small class="text-muted d-block">{{ from_date }} — {{ to_date }}</small>
+{% endblock %}
+
+{% block page_css %}
+<style>
+    .report-stat { border-radius: 14px; background: #fff; border: 1px solid #e2e8f0; padding: 1rem; }
+    .report-stat .val { font-size: 1.5rem; font-weight: 800; }
+</style>
+{% endblock %}
+
+{% block page_content %}
+<div class="d-flex flex-wrap gap-2 mb-3 align-items-end">
+    <form method="get" class="d-flex flex-wrap gap-2 align-items-end">
+        <div>
+            <label class="form-label small text-muted mb-0">From</label>
+            <input type="date" name="from" class="form-control form-control-sm" value="{{ from_date|date:'Y-m-d' }}">
+        </div>
+        <div>
+            <label class="form-label small text-muted mb-0">To</label>
+            <input type="date" name="to" class="form-control form-control-sm" value="{{ to_date|date:'Y-m-d' }}">
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+    </form>
+    {% include 'reports/_report_toolbar.html' %}
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="report-stat border-start border-4 border-primary">
+            <div class="small text-muted text-uppercase">Total revenue</div>
+            <div class="val text-primary">{{ total_revenue|taka }}</div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="report-stat border-start border-4 border-success">
+            <div class="small text-muted text-uppercase">Total orders</div>
+            <div class="val text-success">{{ total_orders }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-bottom fw-bold">Sales by cashier (POS user)</div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>#</th>
+                    <th>User</th>
+                    <th class="text-end">Orders</th>
+                    <th class="text-end">Revenue</th>
+                    <th class="text-end">Credit used</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td class="fw-semibold">{{ row.user_name }}</td>
+                    <td class="text-end">{{ row.orders }}</td>
+                    <td class="text-end text-success fw-semibold">{{ row.revenue|taka }}</td>
+                    <td class="text-end text-muted">{{ row.credit|taka }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="text-muted text-center py-4">No sales in this period</td></tr>
+                {% endfor %}
+            </tbody>
+            {% if rows %}
+            <tfoot class="table-light">
+                <tr class="fw-bold">
+                    <td colspan="2">Total</td>
+                    <td class="text-end">{{ total_orders }}</td>
+                    <td class="text-end text-success">{{ total_revenue|taka }}</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+            {% endif %}
+        </table>
+    </div>
+</div>
+{% endblock %}

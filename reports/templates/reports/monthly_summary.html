@@ -1,0 +1,97 @@
+{% extends 'core/layout_app.html' %}
+{% load cms_extras %}
+
+{% block title %}Monthly Summary{% endblock %}
+
+{% block page_title %}
+<h1 class="h4 mb-0 fw-bold"><i class="bi bi-calendar-month text-primary me-2"></i>Monthly Summary</h1>
+<small class="text-muted d-block">{{ month_label }}</small>
+{% endblock %}
+
+{% block page_css %}
+<style>
+    .report-stat { border-radius: 14px; background: #fff; border: 1px solid #e2e8f0; padding: 1rem; }
+    .report-stat .val { font-size: 1.5rem; font-weight: 800; }
+</style>
+{% endblock %}
+
+{% block page_content %}
+<div class="d-flex flex-wrap gap-2 mb-3 align-items-end">
+    <form method="get" class="d-flex flex-wrap gap-2 align-items-end">
+        <div>
+            <label class="form-label small text-muted mb-0">Month</label>
+            <input type="month" name="month" class="form-control form-control-sm" value="{{ month_value }}">
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+    </form>
+    {% include 'reports/_report_toolbar.html' %}
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="report-stat border-start border-4 border-primary">
+            <div class="small text-muted text-uppercase">Month revenue</div>
+            <div class="val text-primary">{{ total_revenue|taka }}</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="report-stat border-start border-4 border-success">
+            <div class="small text-muted text-uppercase">Month orders</div>
+            <div class="val text-success">{{ total_orders }}</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="report-stat border-start border-4 border-warning">
+            <div class="small text-muted text-uppercase">Credit used</div>
+            <div class="val text-warning">{{ total_credit|taka }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom fw-bold">Daily breakdown</div>
+            <div class="table-responsive" style="max-height: 420px; overflow-y: auto;">
+                <table class="table table-sm table-hover align-middle mb-0">
+                    <thead class="table-light sticky-top">
+                        <tr><th>Date</th><th class="text-end">Orders</th><th class="text-end">Revenue</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for day in days %}
+                        <tr>
+                            <td>{{ day.date|date:"D, d M Y" }}</td>
+                            <td class="text-end">{{ day.orders }}</td>
+                            <td class="text-end fw-semibold {% if day.revenue %}text-success{% endif %}">{{ day.revenue|taka }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom fw-bold">Top items (month)</div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr><th>Item</th><th>Qty</th><th class="text-end">Revenue</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for row in top_items %}
+                        <tr>
+                            <td class="fw-semibold">{{ row.item_name }}</td>
+                            <td>{{ row.qty }}</td>
+                            <td class="text-end text-success">{{ row.revenue|taka }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="3" class="text-muted text-center py-3">No sales</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

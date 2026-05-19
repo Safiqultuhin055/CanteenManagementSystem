@@ -26,6 +26,12 @@ class MenuItem(models.Model):
     unit_price = models.DecimalField(max_digits=18, decimal_places=2)
     tax_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     is_vegetarian = models.BooleanField(default=False)
+    item_image = models.ImageField(
+        upload_to='menu_items/',
+        blank=True,
+        null=True,
+        db_column='image_path',
+    )
     is_active = models.BooleanField(default=True)
     is_available = models.BooleanField(default=True)
     is_deleted = models.BooleanField(default=False)
@@ -38,6 +44,10 @@ class MenuItem(models.Model):
 
     def __str__(self):
         return name_with_code(self.item_name, self.item_code)
+
+    @property
+    def has_image(self):
+        return bool(self.item_image)
 
 class Supplier(models.Model):
     supplier_name = models.CharField(max_length=200, unique=True)

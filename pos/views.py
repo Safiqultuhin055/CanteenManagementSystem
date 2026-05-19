@@ -11,8 +11,41 @@ from employee.models import EmployeeCard
 from inventory.models import FoodCategory, MenuItem
 
 from .services.checkout import CheckoutError, process_checkout
+from .services.menu_stock import build_pos_menu_stock
+from .services.receipt_settings import get_receipt_settings
 
 logger = logging.getLogger(__name__)
+
+
+def _normalize_card_number(raw: str) -> str:
+    """Strip whitespace and common HID keyboard-wedge prefixes."""
+    s = (raw or '').strip()
+    while s and s[0] in '%;?':
+        s = s[1:].strip()
+    while s and s[-1] in '?;':
+        s = s[:-1].strip()
+    return s
+
+
+def _find_employee_card(card_number: str):
+    """Resolve card by exact UID, case-insensitive, or suffix (partial UID)."""
+    base = EmployeeCard.objects.select_related('employee', 'employee__department').filter(
+        is_active=True,
+        is_deleted=False,
+        card_status='ACTIVE',
+    )
+    card = base.filter(card_number=card_number).first()
+    if card:
+        return card
+    card = base.filter(card_number__iexact=card_number).first()
+    if card:
+        return card
+    if len(card_number) >= 6:
+        card = base.filter(card_number__iendswith=card_number).first()
+        if card:
+            return card
+        card = base.filter(card_number__icontains=card_number).first()
+    return card
 
 
 @login_required
@@ -21,9 +54,12 @@ def pos_dashboard(request):
     menu_items = MenuItem.objects.filter(
         is_active=True, is_available=True, is_deleted=False
     ).select_related('category').order_by('category__category_name', 'item_name')
+    menu_stock = build_pos_menu_stock(menu_items)
     return render(request, 'pos/pos_dashboard.html', {
         'categories': categories,
         'menu_items': menu_items,
+        'menu_stock': menu_stock,
+        'receipt_defaults': get_receipt_settings(),
     })
 
 
@@ -32,19 +68,13 @@ def pos_dashboard(request):
 def api_scan_card(request):
     try:
         data = json.loads(request.body)
-        card_number = (data.get('card_number') or '').strip()
+        card_number = _normalize_card_number(data.get('card_number') or '')
         if not card_number:
             return JsonResponse({'success': False, 'message': 'Card number required'})
 
-        card = EmployeeCard.objects.select_related('employee', 'employee__department').filter(
-            card_number=card_number,
-            is_active=True,
-            is_deleted=False,
-            card_status='ACTIVE',
-        ).first()
-
+        card = _find_employee_card(card_number)
         if not card:
-            return JsonResponse({'success': False, 'message': 'Invalid or inactive card'})
+            return JsonResponse({'success': False, 'message': f'Card not found: {card_number}'})
 
         employee = card.employee
         if not employee.is_active or employee.is_deleted:
@@ -53,11 +83,12 @@ def api_scan_card(request):
         bal = EmployeeBalance.objects.filter(employee_id=employee.id).first()
         balance = float(bal.advance_balance) if bal else 0.0
         credit_limit = float((bal.credit_limit - bal.credit_used) if bal else 0)
+        dept = employee.department.department_name if employee.department_id else '—'
 
         return JsonResponse({
             'success': True,
             'employee_name': employee.full_name,
-            'department': employee.department.department_name,
+            'department': dept,
             'balance': balance,
             'credit_limit': credit_limit,
             'card_id': card.id,

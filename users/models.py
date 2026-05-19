@@ -1,4 +1,4 @@
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.db import models
 
 from core.model_display import name_with_code
@@ -40,7 +40,7 @@ class CustomUserManager(BaseUserManager):
 
         return self.create_user(username, password, **extra_fields)
 
-class User(AbstractBaseUser, PermissionsMixin):
+class User(AbstractBaseUser):
     username = models.CharField(max_length=150, unique=True)
     password = models.CharField(max_length=256, db_column='password_hash')
     email = models.EmailField(max_length=254, unique=True, blank=True, null=True)
@@ -60,6 +60,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     
     profile_image = models.CharField(max_length=500, blank=True, null=True)
     
+    is_superuser = models.BooleanField(default=False)
     is_staff = models.BooleanField(default=True)
     is_active = models.BooleanField(default=True)
     is_deleted = models.BooleanField(default=False)
@@ -86,6 +87,27 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return name_with_code(self.full_name or self.username, self.username)
+
+    def has_perm(self, perm, obj=None):
+        """Django admin/auth hook — uses CMS roles, not auth.Permission M2M."""
+        if not self.is_active:
+            return False
+        if self.is_superuser:
+            return True
+        if self.is_staff:
+            from users.permissions import is_admin_user
+            return is_admin_user(self)
+        return False
+
+    def has_module_perms(self, app_label):
+        if not self.is_active:
+            return False
+        if self.is_superuser:
+            return True
+        if self.is_staff:
+            from users.permissions import is_admin_user
+            return is_admin_user(self)
+        return False
 
 class UserRole(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -156,4 +178,38 @@ class RolePermission(models.Model):
 
     class Meta:
         db_table = 'role_permissions'
+        managed = False
+
+
+class UserPermission(models.Model):
+    """Direct permission grants for a user (user-wise menu assignment)."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, db_column='user_id')
+    permission = models.ForeignKey(Permission, on_delete=models.CASCADE, db_column='permission_id')
+    is_active = models.BooleanField(default=True)
+    is_deleted = models.BooleanField(default=False)
+    created_by = models.IntegerField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_by = models.IntegerField(blank=True, null=True)
+    updated_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        db_table = 'user_permissions'
+        managed = False
+
+
+class UserMenuGrant(models.Model):
+    """Explicit menu assignment per user (checkbox on/off, soft delete)."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, db_column='user_id')
+    menu = models.ForeignKey(Menu, on_delete=models.CASCADE, db_column='menu_id')
+    is_active = models.BooleanField(default=True)
+    is_deleted = models.BooleanField(default=False)
+    created_by = models.IntegerField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_by = models.IntegerField(blank=True, null=True)
+    updated_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        db_table = 'user_menu_grants'
         managed = False

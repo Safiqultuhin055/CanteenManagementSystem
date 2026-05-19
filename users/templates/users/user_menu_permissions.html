@@ -1,0 +1,394 @@
+﻿{% extends 'core/layout_app.html' %}
+
+
+
+{% block title %}User menu permissions{% endblock %}
+
+
+
+{% block page_title %}
+
+<h1 class="h4 mb-0 fw-bold"><i class="bi bi-ui-checks text-primary me-2"></i>User menu permissions</h1>
+
+<small class="text-muted d-block">Assign which menus each user can access (saved on each checkbox click)</small>
+
+{% endblock %}
+
+
+
+{% block page_css %}
+
+<style>
+
+    .ump-layout { display: grid; grid-template-columns: 320px 1fr; gap: 1.25rem; min-height: 520px; }
+
+    @media (max-width: 991px) { .ump-layout { grid-template-columns: 1fr; } }
+
+    .ump-panel {
+
+        background: var(--dash-surface); border: 1px solid var(--dash-border);
+
+        border-radius: 16px; box-shadow: var(--dash-shadow); overflow: hidden;
+
+    }
+
+    .ump-panel-head {
+
+        padding: 1rem 1.25rem; border-bottom: 1px solid var(--dash-border);
+
+        font-weight: 700; background: linear-gradient(180deg, #fafbfc, #fff);
+
+    }
+
+    .user-pick {
+
+        display: block; padding: 0.85rem 1.25rem; border-bottom: 1px solid var(--dash-border);
+
+        text-decoration: none; color: var(--dash-text); transition: background 0.15s;
+
+    }
+
+    .user-pick:hover { background: #f1f5f9; }
+
+    .user-pick.active { background: #eff6ff; border-left: 3px solid #3b82f6; }
+
+    .menu-tree { margin: 0; padding: 0.5rem 0; }
+
+    .menu-tree-children { margin: 0; padding-left: 1.25rem; border-left: 2px solid #e2e8f0; margin-left: 0.75rem; }
+
+    .menu-tree-item { list-style: none; }
+
+    .menu-tree-row {
+
+        display: flex; align-items: flex-start; gap: 0.35rem;
+
+        padding: 0.5rem 1rem 0.5rem 0.5rem;
+
+    }
+
+    .menu-tree-row:hover { background: #f8fafc; }
+
+    .menu-tree-row.disabled { opacity: 0.55; }
+
+    .tree-toggle { width: 1.5rem; flex-shrink: 0; text-decoration: none; }
+
+    .tree-spacer { width: 1.5rem; flex-shrink: 0; display: inline-block; }
+
+    .menu-tree-label { display: flex; align-items: flex-start; gap: 0.65rem; cursor: pointer; }
+
+    .menu-check { width: 1.1rem; height: 1.1rem; margin-top: 0.2rem; flex-shrink: 0; }
+
+    .menu-tree-text { flex: 1; min-width: 0; }
+
+    .perm-tags { font-size: 0.68rem; color: #64748b; display: block; }
+
+    .perm-tag {
+
+        display: inline-block; background: #f1f5f9; border-radius: 4px;
+
+        padding: 0.1rem 0.35rem; margin-right: 0.25rem; margin-top: 0.2rem;
+
+    }
+
+    .menu-tree-item.collapsed > .menu-tree-children { display: none; }
+
+    .menu-tree-item.collapsed > .menu-tree-row .tree-toggle i { transform: rotate(-90deg); }
+
+    .save-toast {
+
+        position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 1050;
+
+        min-width: 200px; display: none;
+
+    }
+
+    .sticky-actions {
+
+        position: sticky; bottom: 0; background: #fff;
+
+        border-top: 1px solid var(--dash-border); padding: 0.75rem 1.25rem;
+
+    }
+
+</style>
+
+{% endblock %}
+
+
+
+{% block page_content %}
+
+<div class="alert alert-info border-0 rounded-3 mb-3 small">
+
+    <i class="bi bi-info-circle me-2"></i>
+
+    Select a user, then check menus in the tree. Each click saves to <strong>user_permissions</strong> immediately.
+
+    After assignment, the sidebar shows only allowed menus for that user.
+
+</div>
+
+
+
+<div class="ump-layout">
+
+    <div class="ump-panel">
+
+        <div class="ump-panel-head">Search users</div>
+
+        <form method="get" class="p-3 border-bottom">
+
+            <div class="input-group">
+
+                <input type="search" name="q" class="form-control" placeholder="Name or username..."
+
+                       value="{{ search_q }}" autocomplete="off" id="userSearchInput">
+
+                {% if selected_user %}<input type="hidden" name="user" value="{{ selected_user.pk }}">{% endif %}
+
+                <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i></button>
+
+            </div>
+
+        </form>
+
+        <div class="overflow-auto" style="max-height: 480px;">
+
+            {% for u in users %}
+
+            <a href="?user={{ u.pk }}&q={{ search_q|urlencode }}"
+
+               class="user-pick {% if selected_user and selected_user.pk == u.pk %}active{% endif %}">
+
+                <div class="fw-semibold">{{ u.full_name|default:u.username }}</div>
+
+                <small class="text-muted">{{ u.username }}{% if u.email %} &middot; {{ u.email }}{% endif %}</small>
+
+            </a>
+
+            {% empty %}
+
+            <p class="text-muted small p-3 mb-0">No users found.</p>
+
+            {% endfor %}
+
+        </div>
+
+    </div>
+
+
+
+    <div class="ump-panel d-flex flex-column">
+
+        {% if selected_user %}
+
+        <div class="ump-panel-head d-flex justify-content-between align-items-center flex-wrap gap-2">
+
+            <span>Menus for <strong>{{ selected_user.full_name|default:selected_user.username }}</strong></span>
+
+            <small class="text-muted fw-normal">{{ selected_user.username }}</small>
+
+        </div>
+
+        <div class="px-3 py-2 border-bottom bg-light d-flex gap-2 flex-wrap align-items-center">
+
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="expandAllBtn">Expand all</button>
+
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="collapseAllBtn">Collapse all</button>
+
+            <span class="text-muted small ms-auto" id="saveStatus"></span>
+
+        </div>
+
+        <div class="flex-grow-1 overflow-auto" style="max-height: 480px;" id="menuTreeWrap"
+
+             data-user-id="{{ selected_user.pk }}"
+
+             data-toggle-url="{% url 'users:api_toggle_user_menu' %}">
+
+            <ul class="menu-tree list-unstyled mb-0">
+
+                {% include 'users/partials/menu_perm_tree_node.html' with nodes=menu_tree %}
+
+            </ul>
+
+        </div>
+
+        <div class="sticky-actions">
+
+            <small class="text-muted">Use checkboxes to grant or revoke access. Parent and child menus are listed like the sidebar.</small>
+
+        </div>
+
+        {% else %}
+
+        <div class="p-5 text-center text-muted flex-grow-1 d-flex flex-column justify-content-center">
+
+            <i class="bi bi-person-search display-4 mb-3 opacity-50"></i>
+
+            <p class="mb-0">Search and select a user from the list to assign menu permissions.</p>
+
+        </div>
+
+        {% endif %}
+
+    </div>
+
+</div>
+
+
+
+<div class="alert alert-success save-toast shadow" id="saveToast" role="alert">Saved</div>
+
+{% endblock %}
+
+
+
+{% block page_js %}
+
+<script>
+
+(function () {
+
+    const wrap = document.getElementById('menuTreeWrap');
+
+    if (!wrap) return;
+
+
+
+    const userId = wrap.dataset.userId;
+
+    const toggleUrl = wrap.dataset.toggleUrl;
+
+    const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value
+
+        || document.cookie.match(/csrftoken=([^;]+)/)?.[1];
+
+    const statusEl = document.getElementById('saveStatus');
+
+    const toast = document.getElementById('saveToast');
+
+
+
+    function showStatus(msg, isError) {
+
+        if (statusEl) {
+
+            statusEl.textContent = msg;
+
+            statusEl.className = 'small ms-auto ' + (isError ? 'text-danger' : 'text-success');
+
+        }
+
+        if (toast && !isError) {
+
+            toast.style.display = 'block';
+
+            setTimeout(() => { toast.style.display = 'none'; }, 1200);
+
+        }
+
+    }
+
+
+
+    document.querySelectorAll('.tree-toggle').forEach(btn => {
+
+        btn.addEventListener('click', (e) => {
+
+            e.preventDefault();
+
+            const item = btn.closest('.menu-tree-item');
+
+            if (item) item.classList.toggle('collapsed');
+
+        });
+
+    });
+
+
+
+    document.getElementById('expandAllBtn')?.addEventListener('click', () => {
+
+        document.querySelectorAll('.menu-tree-item.has-children').forEach(el => el.classList.remove('collapsed'));
+
+    });
+
+    document.getElementById('collapseAllBtn')?.addEventListener('click', () => {
+
+        document.querySelectorAll('.menu-tree-item.has-children').forEach(el => el.classList.add('collapsed'));
+
+    });
+
+
+
+    async function saveToggle(menuId, grant, checkbox) {
+
+        const body = new URLSearchParams();
+
+        body.set('user_id', userId);
+
+        body.set('menu_id', menuId);
+
+        body.set('grant', grant ? '1' : '0');
+
+        showStatus('Saving...', false);
+
+        try {
+
+            const res = await fetch(toggleUrl, {
+
+                method: 'POST',
+
+                headers: { 'X-CSRFToken': csrf, 'Content-Type': 'application/x-www-form-urlencoded' },
+
+                body: body.toString(),
+
+            });
+
+            const data = await res.json();
+
+            if (!data.ok) {
+
+                checkbox.checked = !grant;
+
+                showStatus(data.error || 'Save failed', true);
+
+                return;
+
+            }
+
+            showStatus(grant ? 'Access granted' : 'Access revoked', false);
+
+        } catch (err) {
+
+            checkbox.checked = !grant;
+
+            showStatus('Network error', true);
+
+        }
+
+    }
+
+
+
+    wrap.querySelectorAll('.menu-cb:not(:disabled)').forEach(cb => {
+
+        cb.addEventListener('change', async function () {
+
+            const grant = this.checked;
+
+            const menuId = this.dataset.menuId || this.value;
+
+            await saveToggle(menuId, grant, this);
+
+        });
+
+    });
+
+})();
+
+</script>
+
+{% endblock %}
+

@@ -11,7 +11,9 @@ from balance.models import CardTransaction, EmployeeBalance
 from employee.models import EmployeeCard
 from inventory.models import DailyFoodStock, MenuItem
 from kitchen.models import KitchenQueue
+from kitchen.realtime import notify_kitchen_queue_changed
 from pos.models import Order, OrderDetail, Payment
+from pos.services.receipt_settings import get_receipt_settings
 
 logger = logging.getLogger(__name__)
 
@@ -253,6 +255,7 @@ def _commit_checkout(
             distribution_status='PENDING',
             advance_deducted=deduct_adv,
             credit_deducted=deduct_cred,
+            created_by_id=user_id,
         )
 
         for li in line_items:
@@ -279,6 +282,7 @@ def _commit_checkout(
             queue_date=sale_date,
             queue_status='PENDING',
         )
+        transaction.on_commit(notify_kitchen_queue_changed)
 
         payment = Payment.objects.create(
             payment_number=_next_payment_number(),
@@ -308,10 +312,24 @@ def _commit_checkout(
             )
 
         item_summary = [
-            {'name': li['menu_item'].item_name, 'qty': li['qty'], 'line_total': float(li['line_total'])}
+            {
+                'name': li['menu_item'].item_name,
+                'qty': li['qty'],
+                'unit_price': float(li['unit_price']),
+                'line_total': float(li['line_total']),
+            }
             for li in line_items
         ]
         qty_total = sum(li['qty'] for li in line_items)
+        display_customer = customer_name or (
+            employee.full_name if employee else 'Guest Customer'
+        )
+        cashier = ''
+        if user_id:
+            from users.models import User
+            cashier_user = User.objects.filter(pk=user_id).only('username', 'full_name').first()
+            if cashier_user:
+                cashier = cashier_user.full_name or cashier_user.username
 
         return {
             'success': True,
@@ -325,4 +343,20 @@ def _commit_checkout(
             'item_count': len(line_items),
             'quantity_total': qty_total,
             'items': item_summary,
+            'receipt': {
+                **get_receipt_settings(),
+                'order_number': order_number,
+                'token_number': token_number,
+                'barcode': order_number,
+                'order_date': str(sale_date),
+                'order_time': timezone.now().strftime('%d %b %Y, %I:%M %p'),
+                'customer_name': display_customer,
+                'payment_method': 'Cash' if is_guest else 'Card',
+                'cashier': cashier,
+                'subtotal': float(subtotal),
+                'tax_amount': float(tax_total),
+                'total_amount': float(total),
+                'quantity_total': qty_total,
+                'items': item_summary,
+            },
         }

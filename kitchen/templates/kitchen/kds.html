@@ -3,124 +3,583 @@
 {% block title %}Kitchen Display{% endblock %}
 
 {% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
 <style>
-    .kds-wrap { height: 100vh; overflow: hidden; background: #0f172a; color: #e2e8f0; font-family: 'Plus Jakarta Sans', sans-serif; }
-    .kds-top { background: #1e293b; padding: 0.85rem 1.25rem; border-bottom: 1px solid #334155; }
-    .kds-stat { background: rgba(255,255,255,0.06); border-radius: 10px; padding: 0.35rem 0.85rem; font-size: 0.85rem; }
-    .kds-board { height: calc(100vh - 64px); padding: 1rem; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
-    .kds-col.ready-col { border-color: #22c55e; }
-    .kds-card.ready-done { border-left-color: #22c55e; opacity: 0.85; }
-    .kds-col { background: #1e293b; border-radius: 14px; border: 1px solid #334155; display: flex; flex-direction: column; min-height: 0; }
-    .kds-col-h { padding: 0.75rem 1rem; font-weight: 700; border-bottom: 1px solid #334155; }
-    .kds-col-body { padding: 0.75rem; overflow-y: auto; flex: 1; }
-    .kds-card { background: #334155; border-radius: 12px; padding: 1rem; margin-bottom: 0.75rem; border-left: 4px solid #f59e0b; }
-    .kds-card.prep { border-left-color: #38bdf8; }
-    .token-pill { font-size: 1.35rem; font-weight: 800; background: #fbbf24; color: #0f172a; padding: 0.2rem 0.75rem; border-radius: 999px; }
-    .kds-items { font-size: 0.95rem; line-height: 1.5; }
-    .wait-badge { font-size: 0.75rem; background: rgba(239,68,68,0.2); color: #fca5a5; padding: 0.15rem 0.5rem; border-radius: 6px; }
+    body { margin: 0; overflow: hidden; }
+    .kds-wrap {
+        --kds-bg: #0a0f1a;
+        --kds-surface: rgba(30, 41, 59, 0.72);
+        --kds-border: rgba(148, 163, 184, 0.12);
+        --kds-pending: #f59e0b;
+        --kds-ready: #22c55e;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        background: var(--kds-bg);
+        color: #e2e8f0;
+        font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+        position: relative;
+    }
+    .kds-wrap::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background:
+            radial-gradient(ellipse 80% 50% at 20% 0%, rgba(245, 158, 11, 0.08), transparent 50%),
+            radial-gradient(ellipse 60% 40% at 90% 80%, rgba(34, 197, 94, 0.07), transparent 45%),
+            radial-gradient(ellipse 50% 30% at 50% 50%, rgba(59, 130, 246, 0.04), transparent);
+        pointer-events: none;
+    }
+    .kds-top {
+        position: relative;
+        z-index: 2;
+        padding: 1rem 1.5rem;
+        background: rgba(15, 23, 42, 0.85);
+        backdrop-filter: blur(16px);
+        border-bottom: 1px solid var(--kds-border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    .kds-brand {
+        display: flex;
+        align-items: center;
+        gap: 0.85rem;
+    }
+    .kds-brand-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #f59e0b, #ea580c);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        color: #fff;
+        box-shadow: 0 4px 20px rgba(245, 158, 11, 0.35);
+    }
+    .kds-brand h1 {
+        font-size: 1.15rem;
+        font-weight: 800;
+        margin: 0;
+        letter-spacing: -0.02em;
+        color: #fff;
+    }
+    .kds-brand small {
+        color: #94a3b8;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    .kds-stats { display: flex; gap: 0.65rem; flex-wrap: wrap; }
+    .kds-stat {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--kds-border);
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #94a3b8;
+    }
+    .kds-stat strong {
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: #fff;
+        min-width: 1.5rem;
+        text-align: center;
+    }
+    .kds-stat.stat-pending strong { color: var(--kds-pending); }
+    .kds-stat.stat-ready strong { color: var(--kds-ready); }
+    .kds-stat i { font-size: 1.1rem; }
+    .kds-actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+    .kds-live {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 999px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        background: rgba(34, 197, 94, 0.15);
+        color: #4ade80;
+        border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+    .kds-live.offline {
+        background: rgba(239, 68, 68, 0.15);
+        color: #f87171;
+        border-color: rgba(239, 68, 68, 0.3);
+    }
+    .kds-live-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: currentColor;
+        animation: kdsPulse 1.5s ease infinite;
+    }
+    .kds-live.offline .kds-live-dot { animation: none; }
+    @keyframes kdsPulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.5; transform: scale(0.85); }
+    }
+    .kds-clock {
+        font-size: 0.8rem;
+        color: #64748b;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+    }
+    .kds-btn {
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.8rem;
+        padding: 0.45rem 0.9rem;
+        border: 1px solid var(--kds-border);
+        color: #cbd5e1;
+        background: rgba(255, 255, 255, 0.04);
+        text-decoration: none;
+        transition: background 0.2s, color 0.2s, border-color 0.2s;
+    }
+    .kds-btn:hover { background: rgba(255, 255, 255, 0.1); color: #fff; border-color: rgba(255, 255, 255, 0.2); }
+    .kds-board {
+        position: relative;
+        z-index: 1;
+        flex: 1;
+        min-height: 0;
+        padding: 0.65rem 0.85rem 0.85rem;
+        display: grid;
+        grid-template-columns: 1.35fr 0.65fr;
+        gap: 0.65rem;
+        max-width: 100%;
+        width: 100%;
+        margin: 0 auto;
+        box-sizing: border-box;
+    }
+    .kds-col {
+        background: var(--kds-surface);
+        backdrop-filter: blur(12px);
+        border-radius: 20px;
+        border: 1px solid var(--kds-border);
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        overflow: hidden;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+    }
+    .kds-col.col-pending { border-top: 3px solid var(--kds-pending); }
+    .kds-col.col-ready { border-top: 3px solid var(--kds-ready); }
+    .kds-col-h {
+        padding: 0.5rem 0.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--kds-border);
+        background: rgba(0, 0, 0, 0.15);
+    }
+    .kds-col-title {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-weight: 800;
+        font-size: 0.82rem;
+        letter-spacing: -0.01em;
+    }
+    .kds-col-title .icon-wrap {
+        width: 26px;
+        height: 26px;
+        border-radius: 7px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+    }
+    .col-pending .icon-wrap { background: rgba(245, 158, 11, 0.2); color: var(--kds-pending); }
+    .col-ready .icon-wrap { background: rgba(34, 197, 94, 0.2); color: var(--kds-ready); }
+    .kds-col-badge {
+        font-size: 0.75rem;
+        font-weight: 800;
+        padding: 0.25rem 0.65rem;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        color: #fff;
+    }
+    .kds-col-body {
+        padding: 0.5rem;
+        overflow-y: auto;
+        flex: 1;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+        gap: 0.45rem;
+        align-content: start;
+    }
+    .kds-col-body:has(.kds-empty) {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .kds-col-body::-webkit-scrollbar { width: 6px; }
+    .kds-col-body::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+    .kds-col-foot {
+        padding: 0.35rem 0.5rem;
+        text-align: center;
+        font-size: 0.65rem;
+        color: #64748b;
+        border-top: 1px solid var(--kds-border);
+    }
+    .kds-card {
+        background: linear-gradient(145deg, rgba(51, 65, 85, 0.92), rgba(30, 41, 59, 0.98));
+        border-radius: 10px;
+        padding: 0.45rem 0.5rem 0.5rem;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        animation: kdsCardIn 0.25s ease backwards;
+        transition: border-color 0.15s;
+        min-width: 0;
+    }
+    .kds-card:hover { border-color: rgba(255, 255, 255, 0.15); }
+    @keyframes kdsCardIn {
+        from { opacity: 0; transform: translateY(12px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .kds-card-head {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+        margin-bottom: 0.3rem;
+    }
+    .token-pill {
+        font-size: 1rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        color: #0f172a;
+        background: linear-gradient(135deg, #fde047, #f59e0b);
+        padding: 0.1rem 0.45rem;
+        border-radius: 6px;
+        line-height: 1.25;
+        flex-shrink: 0;
+    }
+    .kds-card.ready-card .token-pill {
+        background: linear-gradient(135deg, #4ade80, #16a34a);
+        color: #fff;
+    }
+    .wait-badge {
+        font-size: 0.58rem;
+        font-weight: 700;
+        padding: 0.15rem 0.35rem;
+        border-radius: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        flex-shrink: 0;
+    }
+    .wait-badge.ok { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
+    .wait-badge.warn { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+    .wait-badge.urgent { background: rgba(239, 68, 68, 0.25); color: #f87171; animation: kdsUrgent 1s ease infinite; }
+    @keyframes kdsUrgent {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+    .kds-meta {
+        font-size: 0.62rem;
+        color: #94a3b8;
+        margin-bottom: 0.25rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.3;
+    }
+    .kds-items-line {
+        font-size: 0.68rem;
+        font-weight: 600;
+        color: #e2e8f0;
+        line-height: 1.35;
+        margin-bottom: 0.35rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    .item-chip { color: #cbd5e1; }
+    .item-chip + .item-chip::before { content: ' · '; color: #64748b; font-weight: 400; }
+    .btn-mark-ready {
+        margin-left: auto;
+        padding: 0.2rem 0.4rem;
+        border: none;
+        border-radius: 6px;
+        font-weight: 700;
+        font-size: 0.62rem;
+        line-height: 1;
+        color: #fff;
+        background: linear-gradient(135deg, #22c55e, #16a34a);
+        cursor: pointer;
+        flex-shrink: 0;
+        white-space: nowrap;
+    }
+    .btn-mark-ready:hover { filter: brightness(1.1); }
+    .btn-mark-ready:disabled { opacity: 0.5; cursor: wait; }
+    .kds-empty {
+        width: 100%;
+        text-align: center;
+        padding: 1.5rem 0.5rem;
+        color: #64748b;
+    }
+    .kds-empty i { font-size: 1.75rem; opacity: 0.35; margin-bottom: 0.5rem; display: block; }
+    .kds-empty p { margin: 0; font-weight: 600; font-size: 0.75rem; }
+    .kds-empty small { font-size: 0.65rem; }
+    .ready-status {
+        font-size: 0.58rem;
+        font-weight: 700;
+        color: #4ade80;
+        margin-top: 0.2rem;
+    }
+    .col-ready .kds-col-body {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
+    .kds-toast-wrap {
+        position: fixed;
+        bottom: 1.5rem;
+        right: 1.5rem;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        pointer-events: none;
+    }
+    .kds-toast {
+        padding: 1rem 1.25rem;
+        border-radius: 14px;
+        background: rgba(30, 41, 59, 0.95);
+        border: 1px solid rgba(34, 197, 94, 0.4);
+        color: #fff;
+        font-weight: 600;
+        font-size: 0.9rem;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+        animation: kdsToastIn 0.4s ease;
+        max-width: 320px;
+    }
+    @keyframes kdsToastIn {
+        from { opacity: 0; transform: translateX(20px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+    @media (min-width: 1400px) {
+        .kds-col-body { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+    }
+    @media (max-width: 900px) {
+        .kds-board { grid-template-columns: 1fr; }
+        .kds-col { min-height: 240px; }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="kds-wrap">
-    <div class="kds-top d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <div class="d-flex align-items-center gap-3">
-            <h2 class="h5 mb-0 fw-bold text-white"><i class="bi bi-display me-2"></i>Kitchen Display</h2>
-            <span class="kds-stat text-warning"><i class="bi bi-hourglass-split me-1"></i>Pending: <strong id="cnt-pending">{{ stats.pending }}</strong></span>
-            <span class="kds-stat text-info"><i class="bi bi-fire me-1"></i>Preparing: <strong id="cnt-preparing">{{ stats.preparing }}</strong></span>
-            <span class="kds-stat text-success"><i class="bi bi-bag-check me-1"></i>Ready today: <strong id="cnt-ready">0</strong></span>
+    <header class="kds-top">
+        <div class="kds-brand">
+            <div class="kds-brand-icon"><i class="bi bi-fire"></i></div>
+            <div>
+                <h1>Kitchen Display</h1>
+                <small>Live order queue</small>
+            </div>
         </div>
-        <div>
-            <span class="badge bg-success me-2" id="connection-status">Live</span>
-            <a href="{% url 'distribution:distribution_dashboard' %}" class="btn btn-outline-light btn-sm me-1"><i class="bi bi-box-seam"></i> Distribution</a>
-            <a href="{% url 'core:dashboard' %}" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left"></i> Exit</a>
+        <div class="kds-stats">
+            <div class="kds-stat stat-pending">
+                <i class="bi bi-hourglass-split"></i>
+                <span>Pending <strong id="cnt-pending">{{ stats.pending }}</strong></span>
+            </div>
+            <div class="kds-stat stat-ready">
+                <i class="bi bi-bag-check"></i>
+                <span>Ready <strong id="cnt-ready">0</strong></span>
+            </div>
         </div>
-    </div>
-    <div class="kds-board">
-        <div class="kds-col">
-            <div class="kds-col-h text-warning"><i class="bi bi-clock me-2"></i>Pending</div>
+        <div class="kds-actions">
+            <span class="kds-clock" id="kds-clock"></span>
+            <span class="kds-live" id="connection-status"><span class="kds-live-dot"></span> Live</span>
+            <a href="{% url 'distribution:distribution_dashboard' %}" class="kds-btn"><i class="bi bi-box-seam me-1"></i>Distribution</a>
+            <a href="{% url 'core:dashboard' %}" class="kds-btn"><i class="bi bi-arrow-left me-1"></i>Exit</a>
+        </div>
+    </header>
+
+    <main class="kds-board">
+        <section class="kds-col col-pending">
+            <div class="kds-col-h">
+                <div class="kds-col-title">
+                    <span class="icon-wrap"><i class="bi bi-clock-history"></i></span>
+                    Pending orders
+                </div>
+                <span class="kds-col-badge" id="badge-pending">{{ stats.pending }}</span>
+            </div>
             <div class="kds-col-body" id="col-pending"></div>
-        </div>
-        <div class="kds-col">
-            <div class="kds-col-h text-info"><i class="bi bi-egg-fried me-2"></i>Preparing</div>
-            <div class="kds-col-body" id="col-inprogress"></div>
-        </div>
-        <div class="kds-col ready-col">
-            <div class="kds-col-h text-success"><i class="bi bi-check2-circle me-2"></i>Ready → Pickup</div>
+        </section>
+
+        <section class="kds-col col-ready">
+            <div class="kds-col-h">
+                <div class="kds-col-title">
+                    <span class="icon-wrap"><i class="bi bi-check2-circle"></i></span>
+                    Ready → Pickup
+                </div>
+                <span class="kds-col-badge" id="badge-ready">0</span>
+            </div>
             <div class="kds-col-body" id="col-ready"></div>
-            <p class="small text-center text-muted px-2 pb-2 mb-0">Distribution counter-এ যাবে</p>
-        </div>
-    </div>
+            <p class="kds-col-foot"><i class="bi bi-arrow-right-circle me-1"></i>Sent to distribution counter</p>
+        </section>
+    </main>
+
+    <div class="kds-toast-wrap" id="toast-wrap"></div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 const CSRF = '{{ csrf_token }}';
+const STREAM_URL = '{% url "kitchen:api_kitchen_stream" %}';
+let queueVersion = 0;
+let streamSource = null;
+
+function tickClock() {
+    const el = document.getElementById('kds-clock');
+    if (!el) return;
+    const now = new Date();
+    el.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+setInterval(tickClock, 1000);
+tickClock();
+
+function waitClass(minutes) {
+    if (minutes >= 15) return 'urgent';
+    if (minutes >= 5) return 'warn';
+    return 'ok';
+}
+
+function showToast(message) {
+    const wrap = document.getElementById('toast-wrap');
+    const t = document.createElement('div');
+    t.className = 'kds-toast';
+    t.innerHTML = '<i class="bi bi-check2-circle me-2 text-success"></i>' + message;
+    wrap.appendChild(t);
+    setTimeout(() => t.remove(), 4500);
+}
+
+function applyQueueData(data) {
+    if (!data.success) return;
+    if (typeof data.version === 'number') queueVersion = data.version;
+    renderQueue(data.orders);
+    renderReadyPickup(data.ready_pickup || []);
+    const pending = data.counts.pending;
+    const ready = data.counts.ready || 0;
+    document.getElementById('cnt-pending').textContent = pending;
+    document.getElementById('cnt-ready').textContent = ready;
+    document.getElementById('badge-pending').textContent = pending;
+    document.getElementById('badge-ready').textContent = ready;
+}
+
+function setLiveStatus(online) {
+    const st = document.getElementById('connection-status');
+    if (online) {
+        st.className = 'kds-live';
+        st.innerHTML = '<span class="kds-live-dot"></span> Live';
+    } else {
+        st.className = 'kds-live offline';
+        st.innerHTML = '<span class="kds-live-dot"></span> Reconnecting';
+    }
+}
 
 function fetchQueue() {
-    fetch('{% url "kitchen:api_get_queue" %}')
+    return fetch('{% url "kitchen:api_get_queue" %}')
         .then(r => r.json())
         .then(data => {
-            if (!data.success) return;
-            renderQueue(data.orders);
-            renderReadyPickup(data.ready_pickup || []);
-            document.getElementById('cnt-pending').textContent = data.counts.pending;
-            document.getElementById('cnt-preparing').textContent = data.counts.preparing;
-            document.getElementById('cnt-ready').textContent = data.counts.ready || 0;
-            const st = document.getElementById('connection-status');
-            st.className = 'badge bg-success me-2';
-            st.textContent = 'Live';
+            applyQueueData(data);
+            setLiveStatus(true);
+            return data;
         })
         .catch(() => {
-            const st = document.getElementById('connection-status');
-            st.className = 'badge bg-danger me-2';
-            st.textContent = 'Offline';
+            setLiveStatus(false);
         });
 }
 
-function itemsHtml(items) {
-    if (!items || !items.length) return '<li class="text-muted">No line items</li>';
-    return items.map(i => `<li>${i.quantity}x ${i.item_name}</li>`).join('');
+function connectKitchenStream() {
+    if (streamSource) {
+        streamSource.close();
+        streamSource = null;
+    }
+    const url = STREAM_URL + '?since=' + encodeURIComponent(queueVersion);
+    streamSource = new EventSource(url);
+    streamSource.addEventListener('update', (ev) => {
+        try {
+            const payload = JSON.parse(ev.data);
+            if (payload.version) queueVersion = payload.version;
+        } catch (e) { /* ignore */ }
+        fetchQueue();
+        setLiveStatus(true);
+    });
+    streamSource.onopen = () => setLiveStatus(true);
+    streamSource.onerror = () => {
+        setLiveStatus(false);
+        streamSource.close();
+        streamSource = null;
+        setTimeout(connectKitchenStream, 3000);
+    };
+}
+
+function itemsLine(items) {
+    if (!items || !items.length) return '<div class="kds-items-line text-muted">—</div>';
+    return '<div class="kds-items-line">' + items.map(i =>
+        `<span class="item-chip">${i.quantity}x ${i.item_name}</span>`
+    ).join('') + '</div>';
+}
+
+function emptyState(icon, title, sub) {
+    return `<div class="kds-empty">
+        <i class="bi ${icon}"></i>
+        <p>${title}</p>
+        ${sub ? `<small class="text-muted mt-1">${sub}</small>` : ''}
+    </div>`;
 }
 
 function renderQueue(orders) {
-    let pending = '', prep = '';
-    orders.forEach(o => {
-        const high = (o.priority || 0) > 0;
-        const card = `
-        <div class="kds-card ${o.status === 'IN_PROGRESS' ? 'prep' : ''}">
-            <div class="d-flex justify-content-between align-items-start mb-2">
+    const col = document.getElementById('col-pending');
+    if (!orders.length) {
+        col.innerHTML = emptyState('bi-inbox', 'No pending orders', 'New POS orders appear here');
+        return;
+    }
+    col.innerHTML = orders.map((o, i) => {
+        const wait = o.wait_minutes || 0;
+        const meta = (o.order_number || '—') + ' · ' + (o.customer || 'Guest');
+        return `
+        <article class="kds-card" style="animation-delay:${Math.min(i * 0.02, 0.3)}s">
+            <div class="kds-card-head">
                 <span class="token-pill">#${o.token_number}</span>
-                <span class="wait-badge">${o.wait_minutes || 0} min</span>
+                <span class="wait-badge ${waitClass(wait)}">${wait}m</span>
+                <button type="button" class="btn-mark-ready" title="Mark ready" onclick='markReady(${JSON.stringify(o)}, this)'>
+                    <i class="bi bi-check-lg"></i> Ready
+                </button>
             </div>
-            <div class="small text-white-50 mb-1">${o.order_number || ''} · ${o.customer || 'Guest'}</div>
-            <ul class="kds-items list-unstyled mb-3">${itemsHtml(o.items)}</ul>
-            <div class="d-grid">
-                ${o.status === 'PENDING'
-                    ? `<button class="btn btn-info fw-semibold text-dark" onclick='updateStatus(${JSON.stringify(o)}, "IN_PROGRESS")'>Start preparing</button>`
-                    : `<button class="btn btn-success fw-semibold" onclick='updateStatus(${JSON.stringify(o)}, "READY")'>Mark ready</button>`}
-            </div>
-        </div>`;
-        if (o.status === 'PENDING') pending += card;
-        else if (o.status === 'IN_PROGRESS') prep += card;
-    });
-    document.getElementById('col-pending').innerHTML = pending || '<p class="text-center text-muted mt-4">No pending orders</p>';
-    document.getElementById('col-inprogress').innerHTML = prep || '<p class="text-center text-muted mt-4">Nothing in progress</p>';
+            <div class="kds-meta" title="${meta}">${meta}</div>
+            ${itemsLine(o.items)}
+        </article>`;
+    }).join('');
 }
 
 function renderReadyPickup(list) {
-    const html = list.map(r => `
-        <div class="kds-card ready-done">
-            <div class="token-pill" style="background:#22c55e;color:#fff;">#${r.token_number}</div>
-            <div class="small text-white-50 mt-2">${r.order_number || ''} · ${r.customer || ''}</div>
-            <div class="small text-success mt-2"><i class="bi bi-box-seam"></i> At distribution</div>
-        </div>`).join('');
-    document.getElementById('col-ready').innerHTML = html || '<p class="text-center text-muted mt-4">None ready yet</p>';
+    const col = document.getElementById('col-ready');
+    if (!list.length) {
+        col.innerHTML = emptyState('bi-bag-check', 'Nothing ready yet', 'Completed orders show here');
+        return;
+    }
+    col.innerHTML = list.map((r, i) => `
+        <article class="kds-card ready-card" style="animation-delay:${Math.min(i * 0.02, 0.3)}s">
+            <div class="kds-card-head">
+                <span class="token-pill">#${r.token_number}</span>
+            </div>
+            <div class="kds-meta" title="${(r.order_number || '') + ' · ' + (r.customer || 'Guest')}">${r.order_number || ''} · ${r.customer || 'Guest'}</div>
+            <div class="ready-status"><i class="bi bi-box-seam"></i> Distribution</div>
+        </article>`).join('');
 }
 
-function updateStatus(order, status) {
-    const body = { status };
+function markReady(order, btn) {
+    btn.disabled = true;
+    const body = { status: 'READY' };
     if (order.id) body.queue_id = order.id;
     else body.order_id = order.order_id;
     fetch('{% url "kitchen:api_update_status" %}', {
@@ -130,16 +589,25 @@ function updateStatus(order, status) {
     })
     .then(r => r.json())
     .then(data => {
+        btn.disabled = false;
         if (data.success) {
             fetchQueue();
             if (data.ready_for_pickup) {
-                alert(data.message || ('Token #' + data.token_number + ' ready for pickup'));
+                showToast(data.message || ('Token #' + data.token_number + ' ready for pickup'));
             }
-        } else alert(data.message || 'Update failed');
+        } else {
+            alert(data.message || 'Update failed');
+        }
+    })
+    .catch(() => {
+        btn.disabled = false;
+        alert('Network error');
     });
 }
 
-setInterval(fetchQueue, 5000);
-fetchQueue();
+fetchQueue().then(() => connectKitchenStream());
+window.addEventListener('beforeunload', () => {
+    if (streamSource) streamSource.close();
+});
 </script>
 {% endblock %}

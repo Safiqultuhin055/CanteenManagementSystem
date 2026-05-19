@@ -1,14 +1,18 @@
 import json
 import logging
 
+import json as json_lib
+
 from django.contrib.auth.decorators import login_required
 from django.db import connection
-from django.http import JsonResponse
+from django.http import JsonResponse, StreamingHttpResponse
 from django.shortcuts import render
+from django.urls import reverse
 from django.utils import timezone
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 from core.business_date import get_business_date
+from kitchen.realtime import current_version, notify_kitchen_queue_changed, wait_for_change
 from .services import get_distribution_board, sync_ready_pickup_queue
 
 logger = logging.getLogger(__name__)
@@ -36,13 +40,55 @@ def distribution_dashboard(request):
 
 
 def token_display(request):
-    return render(request, 'distribution/token_display.html')
+    return render(request, 'distribution/token_display.html', {
+        'board_api': reverse('distribution:api_display_board'),
+        'stream_url': reverse('distribution:api_display_stream'),
+    })
 
 
+@require_GET
+def api_display_board(request):
+    """Public board data for wall-mounted token TV (no login)."""
+    board = get_distribution_board()
+    return JsonResponse({
+        'success': True,
+        'version': current_version(),
+        **board,
+    })
+
+
+@require_GET
+def api_display_stream(request):
+    """Public SSE for token display screens."""
+    try:
+        since = int(request.GET.get('since', 0))
+    except (TypeError, ValueError):
+        since = 0
+
+    def event_stream():
+        client_since = since
+        while True:
+            new_version = wait_for_change(client_since, timeout=25.0)
+            if new_version > client_since:
+                payload = json_lib.dumps({'version': new_version})
+                yield f'event: update\ndata: {payload}\n\n'
+                client_since = new_version
+            else:
+                yield ': heartbeat\n\n'
+
+    response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
+    response['Cache-Control'] = 'no-cache, no-transform'
+    response['X-Accel-Buffering'] = 'no'
+    return response
+
+
+@login_required
+@require_GET
 def api_get_tokens(request):
     board = get_distribution_board()
     return JsonResponse({
         'success': True,
+        'version': current_version(),
         **board,
     })
 
@@ -80,6 +126,7 @@ def api_call_token(request):
         q.order.distribution_status = 'READY_FOR_PICKUP'
         q.order.save(update_fields=['distribution_status', 'updated_at'])
 
+    notify_kitchen_queue_changed()
     return JsonResponse({
         'success': True,
         'message': f'Token #{token_number} called — ready for pickup',
@@ -108,6 +155,7 @@ def api_mark_delivered(request):
                 )
                 row = cursor.fetchone()
             if row and row[0]:
+                notify_kitchen_queue_changed()
                 return JsonResponse({'success': True, 'message': 'Order delivered'})
         except Exception:
             logger.debug('usp_CompleteDistribution unavailable, using ORM')
@@ -142,4 +190,5 @@ def _deliver_via_orm(token_number, user_id):
         q.order.order_status = 'DELIVERED'
         q.order.save(update_fields=['distribution_status', 'order_status', 'updated_at'])
 
+    notify_kitchen_queue_changed()
     return JsonResponse({'success': True, 'message': f'Token #{token_number} delivered'})

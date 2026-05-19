@@ -1,4 +1,5 @@
 {% extends 'core/layout_app.html' %}
+{% load cms_extras %}
 
 {% block title %}Reports{% endblock %}
 
@@ -13,7 +14,7 @@
         <div class="card border-0 shadow-sm border-start border-primary border-4 h-100">
             <div class="card-body">
                 <div class="text-muted small text-uppercase fw-semibold">Today's revenue</div>
-                <div class="fs-3 fw-bold text-primary">৳{{ revenue_today|floatformat:2 }}</div>
+                <div class="fs-3 fw-bold text-primary">{{ revenue_today|taka }}</div>
             </div>
         </div>
     </div>
@@ -29,7 +30,7 @@
         <div class="card border-0 shadow-sm border-start border-warning border-4 h-100">
             <div class="card-body">
                 <div class="text-muted small text-uppercase fw-semibold">Credit used</div>
-                <div class="fs-3 fw-bold text-warning">৳{{ credit_today|floatformat:2 }}</div>
+                <div class="fs-3 fw-bold text-warning">{{ credit_today|taka }}</div>
             </div>
         </div>
     </div>
@@ -45,30 +46,69 @@
 
 <div class="row g-3">
     <div class="col-md-6 col-lg-4">
-        <a href="{% url 'reports:sales_report' %}" class="card border-0 shadow-sm text-decoration-none h-100 hover-lift">
+        <a href="{% url 'reports:daily_sales' %}" class="card border-0 shadow-sm text-decoration-none h-100 hover-lift">
             <div class="card-body">
                 <div class="d-flex align-items-center gap-3">
-                    <span class="rounded-3 bg-primary bg-opacity-10 text-primary p-3"><i class="bi bi-currency-exchange fs-4"></i></span>
+                    <span class="rounded-3 bg-primary bg-opacity-10 text-primary p-3"><i class="bi bi-calendar-day fs-4"></i></span>
                     <div>
-                        <h5 class="fw-bold text-dark mb-1">Sales report</h5>
-                        <p class="text-muted small mb-0">Revenue trend, departments, top items</p>
+                        <h5 class="fw-bold text-dark mb-1">Daily sales</h5>
+                        <p class="text-muted small mb-0">Today's orders, revenue &amp; items sold</p>
                     </div>
                 </div>
             </div>
         </a>
     </div>
     <div class="col-md-6 col-lg-4">
-        <div class="card border-0 shadow-sm h-100 opacity-75">
+        <a href="{% url 'reports:user_wise' %}" class="card border-0 shadow-sm text-decoration-none h-100 hover-lift">
             <div class="card-body">
                 <div class="d-flex align-items-center gap-3">
-                    <span class="rounded-3 bg-secondary bg-opacity-10 text-secondary p-3"><i class="bi bi-box-seam fs-4"></i></span>
+                    <span class="rounded-3 bg-info bg-opacity-10 text-info p-3"><i class="bi bi-person-lines-fill fs-4"></i></span>
                     <div>
-                        <h5 class="fw-bold text-muted mb-1">Inventory report</h5>
-                        <p class="text-muted small mb-0">Coming soon</p>
+                        <h5 class="fw-bold text-dark mb-1">User-wise sales</h5>
+                        <p class="text-muted small mb-0">Revenue by POS cashier / user</p>
                     </div>
                 </div>
             </div>
-        </div>
+        </a>
+    </div>
+    <div class="col-md-6 col-lg-4">
+        <a href="{% url 'reports:monthly_summary' %}" class="card border-0 shadow-sm text-decoration-none h-100 hover-lift">
+            <div class="card-body">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="rounded-3 bg-success bg-opacity-10 text-success p-3"><i class="bi bi-calendar-month fs-4"></i></span>
+                    <div>
+                        <h5 class="fw-bold text-dark mb-1">Monthly summary</h5>
+                        <p class="text-muted small mb-0">Day-by-day totals for the month</p>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-6 col-lg-4">
+        <a href="{% url 'reports:inventory_status' %}" class="card border-0 shadow-sm text-decoration-none h-100 hover-lift">
+            <div class="card-body">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="rounded-3 bg-warning bg-opacity-10 text-warning p-3"><i class="bi bi-box-seam fs-4"></i></span>
+                    <div>
+                        <h5 class="fw-bold text-dark mb-1">Inventory status</h5>
+                        <p class="text-muted small mb-0">Daily stock: prepared, sold, remaining</p>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-6 col-lg-4">
+        <a href="{% url 'reports:sales_report' %}" class="card border-0 shadow-sm text-decoration-none h-100 hover-lift">
+            <div class="card-body">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="rounded-3 bg-secondary bg-opacity-10 text-secondary p-3"><i class="bi bi-graph-up-arrow fs-4"></i></span>
+                    <div>
+                        <h5 class="fw-bold text-dark mb-1">Sales analytics</h5>
+                        <p class="text-muted small mb-0">Trends, departments, top items</p>
+                    </div>
+                </div>
+            </div>
+        </a>
     </div>
 </div>
 {% endblock %}

@@ -1,99 +1,99 @@
-{% extends 'core/layout_app.html' %}
-{% block page_title %}{% endblock %}
+﻿{% extends 'core/layout_app.html' %}
+{% load cms_extras %}
+{% block title %}Dashboard{% endblock %}
+
+{% block page_title %}
+<h1 class="h4 mb-0 fw-bold"><i class="bi bi-speedometer2 text-primary me-2"></i>Dashboard</h1>
+<small class="text-muted d-block">Operations overview &middot; {{ today|date:"l, F j, Y" }}</small>
+{% endblock %}
 
 {% block page_css %}
 <style>
     .dash-hero {
         background: linear-gradient(125deg, #0c4a6e 0%, #1d4ed8 42%, #6366f1 78%, #8b5cf6 100%);
-        border-radius: 20px;
-        padding: 2rem 2.25rem;
-        color: #fff;
-        margin-bottom: 1.75rem;
-        position: relative;
-        overflow: hidden;
+        border-radius: 20px; padding: 2rem 2.25rem; color: #fff;
+        margin-bottom: 1.75rem; position: relative; overflow: hidden;
         box-shadow: 0 20px 50px rgba(29, 78, 216, 0.28);
     }
-    .dash-hero::before,
-    .dash-hero::after {
-        content: '';
-        position: absolute;
-        border-radius: 50%;
-        background: rgba(255,255,255,0.06);
+    .dash-hero::before, .dash-hero::after {
+        content: ''; position: absolute; border-radius: 50%; background: rgba(255,255,255,0.06);
     }
     .dash-hero::before { width: 320px; height: 320px; top: -55%; right: 8%; }
     .dash-hero::after { width: 180px; height: 180px; bottom: -40%; left: 5%; }
     .dash-hero-content { position: relative; z-index: 1; }
     .hero-pill {
         display: inline-flex; align-items: center; gap: 0.4rem;
-        background: rgba(255,255,255,0.15);
-        border: 1px solid rgba(255,255,255,0.2);
+        background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2);
         border-radius: 999px; padding: 0.35rem 0.85rem;
         font-size: 0.75rem; font-weight: 600; backdrop-filter: blur(8px);
     }
     .hero-stat-mini {
         text-align: center; padding: 0.75rem 1rem;
-        background: rgba(255,255,255,0.12);
-        border-radius: 14px; border: 1px solid rgba(255,255,255,0.15);
-        min-width: 100px;
+        background: rgba(255,255,255,0.12); border-radius: 14px;
+        border: 1px solid rgba(255,255,255,0.15); min-width: 108px;
     }
     .hero-stat-mini .val { font-size: 1.35rem; font-weight: 800; line-height: 1.2; }
     .hero-stat-mini .lbl { font-size: 0.65rem; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.05em; }
+    .hero-change { font-size: 0.7rem; font-weight: 700; margin-top: 0.15rem; }
+    .hero-change.up { color: #86efac; }
+    .hero-change.down { color: #fca5a5; }
+
+    .ops-pipeline {
+        display: flex; flex-wrap: wrap; gap: 0.65rem; margin-bottom: 1.75rem;
+    }
+    .ops-step {
+        flex: 1; min-width: 140px; padding: 1rem 1.1rem;
+        background: var(--dash-surface); border: 1px solid var(--dash-border);
+        border-radius: 16px; text-decoration: none; color: var(--dash-text);
+        box-shadow: var(--dash-shadow); transition: transform 0.2s, box-shadow 0.2s;
+        position: relative; overflow: hidden;
+    }
+    .ops-step:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(15,23,42,0.1); color: var(--dash-text); }
+    .ops-step .count { font-size: 1.75rem; font-weight: 800; line-height: 1; }
+    .ops-step .label { font-size: 0.72rem; font-weight: 600; color: var(--dash-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    .ops-step .icon { position: absolute; right: 0.75rem; top: 0.75rem; font-size: 1.25rem; opacity: 0.35; }
+    .ops-step.pending { border-left: 4px solid #f59e0b; }
+    .ops-step.preparing { border-left: 4px solid #3b82f6; }
+    .ops-step.ready { border-left: 4px solid #22c55e; }
+    .ops-step.pickup { border-left: 4px solid #8b5cf6; }
+    .ops-step.done { border-left: 4px solid #64748b; }
 
     .stat-card {
-        background: var(--dash-surface);
-        border-radius: 18px;
-        border: 1px solid var(--dash-border);
-        padding: 1.35rem 1.4rem;
-        height: 100%;
+        background: var(--dash-surface); border-radius: 18px;
+        border: 1px solid var(--dash-border); padding: 1.35rem 1.4rem; height: 100%;
         transition: transform 0.22s ease, box-shadow 0.22s ease;
-        box-shadow: var(--dash-shadow);
-        position: relative;
-        overflow: hidden;
+        box-shadow: var(--dash-shadow); position: relative; overflow: hidden;
     }
-    .stat-card::after {
-        content: '';
-        position: absolute;
-        top: 0; right: 0;
-        width: 80px; height: 80px;
-        border-radius: 0 18px 0 100%;
-        opacity: 0.12;
-    }
-    .stat-card.blue::after { background: #2563eb; }
-    .stat-card.green::after { background: #059669; }
-    .stat-card.amber::after { background: #d97706; }
-    .stat-card.purple::after { background: #7c3aed; }
-    .stat-card.rose::after { background: #e11d48; }
-    .stat-card.cyan::after { background: #0891b2; }
-    .stat-card:hover { transform: translateY(-5px); box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12); }
+    .stat-card:hover { transform: translateY(-4px); box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12); }
     .stat-icon {
-        width: 50px; height: 50px; border-radius: 14px;
+        width: 48px; height: 48px; border-radius: 14px;
         display: flex; align-items: center; justify-content: center;
-        font-size: 1.4rem; margin-bottom: 1rem;
+        font-size: 1.3rem; margin-bottom: 0.85rem;
     }
-    .stat-icon.blue { background: linear-gradient(135deg, #dbeafe, #bfdbfe); color: #1d4ed8; }
-    .stat-icon.green { background: linear-gradient(135deg, #d1fae5, #a7f3d0); color: #047857; }
-    .stat-icon.amber { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #b45309; }
-    .stat-icon.purple { background: linear-gradient(135deg, #ede9fe, #ddd6fe); color: #6d28d9; }
-    .stat-icon.rose { background: linear-gradient(135deg, #ffe4e6, #fecdd3); color: #be123c; }
-    .stat-icon.cyan { background: linear-gradient(135deg, #cffafe, #a5f3fc); color: #0e7490; }
-    .stat-value { font-size: 1.85rem; font-weight: 800; color: var(--dash-text); letter-spacing: -0.02em; }
-    .stat-label { font-size: 0.78rem; font-weight: 600; color: var(--dash-muted); text-transform: uppercase; letter-spacing: 0.05em; }
-    .stat-trend { font-size: 0.72rem; color: var(--dash-muted); margin-top: 0.35rem; }
+    .stat-icon.blue { background: #dbeafe; color: #1d4ed8; }
+    .stat-icon.green { background: #d1fae5; color: #047857; }
+    .stat-icon.amber { background: #fef3c7; color: #b45309; }
+    .stat-icon.purple { background: #ede9fe; color: #6d28d9; }
+    .stat-icon.rose { background: #ffe4e6; color: #be123c; }
+    .stat-icon.cyan { background: #cffafe; color: #0e7490; }
+    .stat-value { font-size: 1.75rem; font-weight: 800; color: var(--dash-text); letter-spacing: -0.02em; }
+    .stat-label { font-size: 0.72rem; font-weight: 600; color: var(--dash-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-trend { font-size: 0.72rem; color: var(--dash-muted); margin-top: 0.3rem; }
+    .badge-delta { font-size: 0.68rem; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: 6px; }
+    .badge-delta.up { background: #dcfce7; color: #15803d; }
+    .badge-delta.down { background: #fee2e2; color: #b91c1c; }
 
     .quick-card {
-        display: flex; align-items: center; gap: 1rem;
-        padding: 1.2rem 1.3rem;
-        background: var(--dash-surface);
-        border: 1px solid var(--dash-border);
-        border-radius: 16px;
-        text-decoration: none; color: var(--dash-text);
+        display: flex; align-items: center; gap: 1rem; padding: 1.15rem 1.25rem;
+        background: var(--dash-surface); border: 1px solid var(--dash-border);
+        border-radius: 16px; text-decoration: none; color: var(--dash-text);
         transition: all 0.22s; box-shadow: var(--dash-shadow); height: 100%;
     }
-    .quick-card:hover { border-color: #93c5fd; color: #1d4ed8; transform: translateY(-3px); box-shadow: 0 12px 28px rgba(37, 99, 235, 0.12); }
+    .quick-card:hover { border-color: #93c5fd; color: #1d4ed8; transform: translateY(-3px); }
     .quick-card-icon {
-        width: 54px; height: 54px; border-radius: 14px;
+        width: 50px; height: 50px; border-radius: 14px;
         display: flex; align-items: center; justify-content: center;
-        font-size: 1.5rem; flex-shrink: 0; color: #fff;
+        font-size: 1.4rem; flex-shrink: 0; color: #fff;
     }
     .quick-card.pos .quick-card-icon { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
     .quick-card.kitchen .quick-card-icon { background: linear-gradient(135deg, #f59e0b, #c2410c); }
@@ -101,80 +101,64 @@
     .quick-card.reports .quick-card-icon { background: linear-gradient(135deg, #a855f7, #6d28d9); }
 
     .panel {
-        background: var(--dash-surface);
-        border-radius: 18px;
-        border: 1px solid var(--dash-border);
-        box-shadow: var(--dash-shadow);
-        overflow: hidden;
+        background: var(--dash-surface); border-radius: 18px;
+        border: 1px solid var(--dash-border); box-shadow: var(--dash-shadow); overflow: hidden;
     }
     .panel-header {
-        padding: 1.1rem 1.4rem;
-        border-bottom: 1px solid var(--dash-border);
-        font-weight: 700; font-size: 0.95rem;
+        padding: 1rem 1.35rem; border-bottom: 1px solid var(--dash-border);
+        font-weight: 700; font-size: 0.92rem;
         display: flex; align-items: center; justify-content: space-between;
         background: linear-gradient(180deg, #fafbfc, #fff);
     }
     .orders-table { font-size: 0.85rem; margin: 0; }
     .orders-table th {
-        font-weight: 600; color: var(--dash-muted);
-        text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.04em;
-        border-bottom-width: 1px; padding: 0.75rem 1.25rem;
+        font-weight: 600; color: var(--dash-muted); text-transform: uppercase;
+        font-size: 0.68rem; letter-spacing: 0.04em; border-bottom-width: 1px; padding: 0.7rem 1.2rem;
     }
-    .orders-table td { padding: 0.85rem 1.25rem; vertical-align: middle; }
+    .orders-table td { padding: 0.8rem 1.2rem; vertical-align: middle; }
     .orders-table tbody tr:hover { background: #f8fafc; }
-    .badge-status {
-        font-size: 0.68rem; font-weight: 700; padding: 0.3rem 0.55rem;
-        border-radius: 6px; text-transform: uppercase;
-    }
-    .badge-status.placed { background: #dbeafe; color: #1d4ed8; }
+    .badge-status { font-size: 0.65rem; font-weight: 700; padding: 0.28rem 0.5rem; border-radius: 6px; text-transform: uppercase; }
     .badge-status.ready { background: #d1fae5; color: #047857; }
     .badge-status.pending { background: #fef3c7; color: #b45309; }
+    .badge-status.preparing { background: #dbeafe; color: #1d4ed8; }
+    .badge-status.pickup { background: #ede9fe; color: #6d28d9; }
+    .badge-status.done { background: #f1f5f9; color: #475569; }
 
-    .dept-bar-row { margin-bottom: 0.85rem; }
-    .dept-bar-label { display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 0.35rem; }
-    .dept-bar-track { height: 8px; background: #e2e8f0; border-radius: 999px; overflow: hidden; }
+    .dept-bar-row { margin-bottom: 0.8rem; }
+    .dept-bar-label { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 0.3rem; }
+    .dept-bar-track { height: 7px; background: #e2e8f0; border-radius: 999px; overflow: hidden; }
     .dept-bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #3b82f6, #6366f1); }
+
+    .top-item-row {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0.65rem 0; border-bottom: 1px solid var(--dash-border);
+    }
+    .top-item-row:last-child { border-bottom: none; }
+    .top-item-rank {
+        width: 26px; height: 26px; border-radius: 8px; background: #eff6ff; color: #1d4ed8;
+        font-size: 0.75rem; font-weight: 800; display: flex; align-items: center; justify-content: center;
+        margin-right: 0.75rem; flex-shrink: 0;
+    }
 
     .module-tile {
         display: flex; flex-direction: column; align-items: center; justify-content: center;
-        padding: 1rem 0.5rem; border-radius: 12px;
-        border: 1px solid var(--dash-border); background: #f8fafc;
-        text-decoration: none; color: var(--dash-text);
-        font-size: 0.78rem; font-weight: 600; min-height: 92px;
-        transition: all 0.2s;
+        padding: 1rem 0.5rem; border-radius: 12px; border: 1px solid var(--dash-border);
+        background: #f8fafc; text-decoration: none; color: var(--dash-text);
+        font-size: 0.76rem; font-weight: 600; min-height: 88px; transition: all 0.2s;
     }
-    .module-tile:hover { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; transform: scale(1.02); }
-    .module-tile i { font-size: 1.4rem; margin-bottom: 0.35rem; color: #3b82f6; }
+    .module-tile:hover { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; }
+    .module-tile i { font-size: 1.35rem; margin-bottom: 0.3rem; color: #3b82f6; }
 
-    .workflow-step {
-        display: flex; align-items: center; gap: 0.85rem;
-        padding: 0.65rem 0; font-size: 0.88rem; color: var(--dash-muted);
-        border-bottom: 1px dashed var(--dash-border);
+    .alert-strip {
+        border-radius: 14px; padding: 0.85rem 1.25rem; margin-bottom: 1.25rem;
+        display: flex; align-items: center; gap: 0.75rem; font-size: 0.88rem;
     }
-    .workflow-step:last-child { border-bottom: none; }
-    .workflow-num {
-        width: 32px; height: 32px; border-radius: 10px;
-        background: linear-gradient(135deg, #eff6ff, #dbeafe);
-        color: #1d4ed8; font-weight: 800; font-size: 0.8rem;
-        display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-    }
-
-    .help-banner {
-        background: linear-gradient(95deg, #f0f9ff 0%, #eef2ff 50%, #faf5ff 100%);
-        border: 1px solid #c7d2fe;
-        border-radius: 18px;
-        padding: 1.35rem 1.6rem;
-    }
+    .alert-strip.warning { background: #fffbeb; border: 1px solid #fcd34d; color: #92400e; }
     .live-dot {
-        width: 8px; height: 8px; border-radius: 50%;
-        background: #22c55e; display: inline-block;
-        box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.35);
-        animation: pulse-dot 2s infinite;
+        width: 8px; height: 8px; border-radius: 50%; background: #22c55e; display: inline-block;
+        box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.35); animation: pulse-dot 2s infinite;
     }
-    @keyframes pulse-dot {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.6; }
-    }
+    @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
 </style>
 {% endblock %}
 
@@ -194,28 +178,41 @@
     <div class="dash-hero-content">
         <div class="row align-items-center g-4">
             <div class="col-lg-7">
-                <span class="hero-pill mb-3"><span class="live-dot"></span> Live data &middot; {{ today|date:"l, F j, Y" }}</span>
-                <h1 class="fw-bold mb-2 display-6">{{ greeting }}, {{ request.user.first_name|default:request.user.username }}!</h1>
-                <p class="mb-0 opacity-90 pe-lg-4">Canteen operations at a glance — sales, kitchen queue, cards, and balances from your database.</p>
+                <span class="hero-pill mb-3"><span class="live-dot"></span> Live &middot; SQL business date</span>
+                <h2 class="fw-bold mb-2 display-6">{{ greeting }}, {{ request.user.full_name|default:request.user.username }}!</h2>
+                <p class="mb-0 opacity-90 pe-lg-4">Track todayâ€™s sales, kitchen queue, pickup counter, and employee balances in one place.</p>
             </div>
             <div class="col-lg-5">
                 <div class="d-flex flex-wrap gap-2 justify-content-lg-end">
                     <div class="hero-stat-mini">
-                        <div class="val">৳{{ sales_today|floatformat:0 }}</div>
+                        <div class="val">{{ sales_today|taka:0 }}</div>
                         <div class="lbl">Sales today</div>
+                        {% if sales_change_pct is not None %}
+                        <div class="hero-change {% if sales_change_pct >= 0 %}up{% else %}down{% endif %}">
+                            {% if sales_change_pct >= 0 %}+{% endif %}{{ sales_change_pct }}% vs yesterday
+                        </div>
+                        {% endif %}
                     </div>
                     <div class="hero-stat-mini">
                         <div class="val">{{ order_count_today }}</div>
                         <div class="lbl">Orders</div>
+                        {% if orders_change_pct is not None %}
+                        <div class="hero-change {% if orders_change_pct >= 0 %}up{% else %}down{% endif %}">
+                            {% if orders_change_pct >= 0 %}+{% endif %}{{ orders_change_pct }}% vs yesterday
+                        </div>
+                        {% endif %}
                     </div>
                     <div class="hero-stat-mini">
-                        <div class="val">{{ kitchen_pending }}</div>
-                        <div class="lbl">Kitchen</div>
+                        <div class="val">{{ week_sales|taka:0 }}</div>
+                        <div class="lbl">7-day sales</div>
                     </div>
                 </div>
-                <div class="text-lg-end mt-3">
+                <div class="text-lg-end mt-3 d-flex flex-wrap gap-2 justify-content-lg-end">
                     <a href="{% url 'pos:dashboard' %}" class="btn btn-light btn-lg fw-bold shadow px-4 rounded-3">
                         <i class="bi bi-lightning-charge-fill text-warning me-2"></i>Open POS
+                    </a>
+                    <a href="{% url 'reports:sales_report' %}" class="btn btn-outline-light btn-lg rounded-3 px-3">
+                        <i class="bi bi-graph-up me-1"></i>Reports
                     </a>
                 </div>
             </div>
@@ -223,53 +220,83 @@
     </div>
 </section>
 
+{% if not db_error %}
+<nav class="ops-pipeline" aria-label="Operations pipeline">
+    <a href="{% url 'kitchen:kds_dashboard' %}" class="ops-step pending">
+        <i class="bi bi-hourglass-split icon"></i>
+        <div class="count">{{ kitchen_pending }}</div>
+        <div class="label">Kitchen pending</div>
+    </a>
+    <a href="{% url 'kitchen:kds_dashboard' %}" class="ops-step preparing">
+        <i class="bi bi-fire icon"></i>
+        <div class="count">{{ kitchen_preparing }}</div>
+        <div class="label">Preparing</div>
+    </a>
+    <a href="{% url 'kitchen:kds_dashboard' %}" class="ops-step ready">
+        <i class="bi bi-check-circle icon"></i>
+        <div class="count">{{ kitchen_ready }}</div>
+        <div class="label">Ready</div>
+    </a>
+    <a href="{% url 'distribution:distribution_dashboard' %}" class="ops-step pickup">
+        <i class="bi bi-box-seam icon"></i>
+        <div class="count">{{ ready_pickup }}</div>
+        <div class="label">Awaiting pickup</div>
+    </a>
+    <a href="{% url 'distribution:distribution_dashboard' %}" class="ops-step done">
+        <i class="bi bi-bag-check icon"></i>
+        <div class="count">{{ completed_today }}</div>
+        <div class="label">Picked up today</div>
+    </a>
+</nav>
+{% endif %}
+
 <div class="row g-3 mb-4">
-    <div class="col-6 col-xl-2">
-        <div class="stat-card blue">
+    <div class="col-6 col-lg-4 col-xl-2">
+        <div class="stat-card">
             <div class="stat-icon blue"><i class="bi bi-people-fill"></i></div>
             <p class="stat-label mb-1">Employees</p>
             <p class="stat-value mb-0">{{ employee_count }}</p>
-            <p class="stat-trend">{{ active_employee_count }} active</p>
+            <p class="stat-trend">{{ active_employee_count }} active &middot; {{ department_count }} depts</p>
         </div>
     </div>
-    <div class="col-6 col-xl-2">
-        <div class="stat-card green">
+    <div class="col-6 col-lg-4 col-xl-2">
+        <div class="stat-card">
             <div class="stat-icon green"><i class="bi bi-cup-hot-fill"></i></div>
-            <p class="stat-label mb-1">Menu Items</p>
+            <p class="stat-label mb-1">Menu items</p>
             <p class="stat-value mb-0">{{ menu_item_count }}</p>
-            <p class="stat-trend">Available today</p>
+            <p class="stat-trend">Available for sale</p>
         </div>
     </div>
-    <div class="col-6 col-xl-2">
-        <div class="stat-card amber">
+    <div class="col-6 col-lg-4 col-xl-2">
+        <div class="stat-card">
             <div class="stat-icon amber"><i class="bi bi-receipt-cutoff"></i></div>
-            <p class="stat-label mb-1">Orders Today</p>
+            <p class="stat-label mb-1">Orders today</p>
             <p class="stat-value mb-0">{{ order_count_today }}</p>
-            <p class="stat-trend">৳{{ sales_today|floatformat:2 }} revenue</p>
+            <p class="stat-trend">{{ guest_orders_today }} guest &middot; {{ week_orders }} this week</p>
         </div>
     </div>
-    <div class="col-6 col-xl-2">
-        <div class="stat-card purple">
+    <div class="col-6 col-lg-4 col-xl-2">
+        <div class="stat-card">
             <div class="stat-icon purple"><i class="bi bi-credit-card-2-front"></i></div>
-            <p class="stat-label mb-1">Active Cards</p>
+            <p class="stat-label mb-1">Active cards</p>
             <p class="stat-value mb-0">{{ card_count }}</p>
-            <p class="stat-trend">{{ department_count }} departments</p>
+            <p class="stat-trend">RFID / employee cards</p>
         </div>
     </div>
-    <div class="col-6 col-xl-2">
-        <div class="stat-card rose">
-            <div class="stat-icon rose"><i class="bi bi-fire"></i></div>
-            <p class="stat-label mb-1">Kitchen Queue</p>
-            <p class="stat-value mb-0">{{ kitchen_pending }}</p>
-            <p class="stat-trend">{{ distribution_pending }} awaiting pickup</p>
+    <div class="col-6 col-lg-4 col-xl-2">
+        <div class="stat-card">
+            <div class="stat-icon rose"><i class="bi bi-cash-stack"></i></div>
+            <p class="stat-label mb-1">Credit today</p>
+            <p class="stat-value mb-0" style="font-size:1.4rem;">{{ credit_today|taka:0 }}</p>
+            <p class="stat-trend">Advance {{ advance_today|taka:0 }}</p>
         </div>
     </div>
-    <div class="col-6 col-xl-2">
-        <div class="stat-card cyan">
+    <div class="col-6 col-lg-4 col-xl-2">
+        <div class="stat-card">
             <div class="stat-icon cyan"><i class="bi bi-wallet2"></i></div>
-            <p class="stat-label mb-1">Advance Balance</p>
-            <p class="stat-value mb-0" style="font-size:1.35rem;">৳{{ total_advance_balance|floatformat:0 }}</p>
-            <p class="stat-trend">৳{{ total_spent_all|floatformat:0 }} total spent</p>
+            <p class="stat-label mb-1">Pool balance</p>
+            <p class="stat-value mb-0" style="font-size:1.35rem;">{{ total_advance_balance|taka:0 }}</p>
+            <p class="stat-trend">Spent {{ total_spent_all|taka:0 }} all time</p>
         </div>
     </div>
 </div>
@@ -278,25 +305,25 @@
     <div class="col-md-6 col-xl-3">
         <a href="{% url 'pos:dashboard' %}" class="quick-card pos">
             <span class="quick-card-icon"><i class="bi bi-cart-check"></i></span>
-            <span><span class="fw-bold d-block">Point of Sale</span><small class="text-muted">RFID scan &amp; checkout</small></span>
+            <span><span class="fw-bold d-block">Point of Sale</span><small class="text-muted">Scan card &amp; checkout</small></span>
         </a>
     </div>
     <div class="col-md-6 col-xl-3">
         <a href="{% url 'kitchen:kds_dashboard' %}" class="quick-card kitchen">
             <span class="quick-card-icon"><i class="bi bi-fire"></i></span>
-            <span><span class="fw-bold d-block">Kitchen</span><small class="text-muted">{{ kitchen_pending }} in queue</small></span>
+            <span><span class="fw-bold d-block">Kitchen KDS</span><small class="text-muted">{{ kitchen_pending|add:kitchen_preparing }} active</small></span>
         </a>
     </div>
     <div class="col-md-6 col-xl-3">
         <a href="{% url 'distribution:distribution_dashboard' %}" class="quick-card dist">
             <span class="quick-card-icon"><i class="bi bi-box-seam"></i></span>
-            <span><span class="fw-bold d-block">Distribution</span><small class="text-muted">Token handover</small></span>
+            <span><span class="fw-bold d-block">Distribution</span><small class="text-muted">{{ ready_pickup }} ready for pickup</small></span>
         </a>
     </div>
     <div class="col-md-6 col-xl-3">
         <a href="{% url 'reports:sales_report' %}" class="quick-card reports">
             <span class="quick-card-icon"><i class="bi bi-graph-up-arrow"></i></span>
-            <span><span class="fw-bold d-block">Reports</span><small class="text-muted">Sales analytics</small></span>
+            <span><span class="fw-bold d-block">Sales report</span><small class="text-muted">Trends &amp; top items</small></span>
         </a>
     </div>
 </div>
@@ -305,8 +332,41 @@
     <div class="col-lg-8">
         <div class="panel h-100">
             <div class="panel-header">
-                <span><i class="bi bi-clock-history text-primary me-2"></i>Recent orders</span>
-                <a href="/admin/pos/order/" class="btn btn-sm btn-outline-primary rounded-pill">View all</a>
+                <span><i class="bi bi-graph-up text-primary me-2"></i>Revenue â€” last 7 days</span>
+                <span class="text-muted small fw-normal">{{ week_orders }} orders</span>
+            </div>
+            <div class="p-3 px-4"><canvas id="dashTrendChart" height="90"></canvas></div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="panel h-100">
+            <div class="panel-header"><i class="bi bi-trophy text-warning me-2"></i>Top items today</div>
+            <div class="p-3 px-4">
+                {% for row in top_items %}
+                <div class="top-item-row">
+                    <div class="d-flex align-items-center flex-grow-1 min-w-0">
+                        <span class="top-item-rank">{{ forloop.counter }}</span>
+                        <span class="fw-semibold text-truncate">{{ row.item_name }}</span>
+                    </div>
+                    <div class="text-end ms-2">
+                        <div class="fw-bold">{{ row.qty }}</div>
+                        <small class="text-success">{{ row.revenue|taka:0 }}</small>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-muted small mb-0 text-center py-3">No sales today yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-8">
+        <div class="panel h-100">
+            <div class="panel-header">
+                <span><i class="bi bi-clock-history text-primary me-2"></i>Todayâ€™s orders</span>
+                <a href="/admin/pos/order/" class="btn btn-sm btn-outline-primary rounded-pill">All orders</a>
             </div>
             {% if recent_orders %}
             <div class="table-responsive">
@@ -317,7 +377,8 @@
                             <th>Customer</th>
                             <th>Token</th>
                             <th>Amount</th>
-                            <th>Status</th>
+                            <th>Kitchen</th>
+                            <th>Pickup</th>
                             <th>Time</th>
                         </tr>
                     </thead>
@@ -325,15 +386,20 @@
                         {% for o in recent_orders %}
                         <tr>
                             <td class="fw-semibold">{{ o.order_number }}</td>
-                            <td>{{ o.employee.full_name|default:o.customer_name|default:"—" }}</td>
+                            <td>{{ o.employee.full_name|default:o.customer_name|default:"Guest" }}</td>
                             <td><span class="badge bg-dark rounded-pill">#{{ o.token_number }}</span></td>
-                            <td class="fw-semibold text-success">৳{{ o.total_amount|floatformat:2 }}</td>
+                            <td class="fw-semibold text-success">{{ o.total_amount|taka }}</td>
                             <td>
-                                <span class="badge-status {% if o.kitchen_status == 'READY' %}ready{% elif o.kitchen_status == 'PENDING' %}pending{% else %}placed{% endif %}">
-                                    {{ o.kitchen_status|default:o.order_status }}
+                                <span class="badge-status {% if o.kitchen_status == 'READY' %}ready{% elif o.kitchen_status == 'PENDING' %}pending{% else %}preparing{% endif %}">
+                                    {{ o.kitchen_status|default:"â€”" }}
                                 </span>
                             </td>
-                            <td class="text-muted">{{ o.order_time|date:"M j, H:i" }}</td>
+                            <td>
+                                <span class="badge-status {% if o.distribution_status == 'PICKED_UP' %}done{% elif o.distribution_status == 'READY_FOR_PICKUP' %}pickup{% else %}pending{% endif %}">
+                                    {{ o.distribution_status|default:"â€”" }}
+                                </span>
+                            </td>
+                            <td class="text-muted">{{ o.order_time|date:"H:i" }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -342,13 +408,13 @@
             {% else %}
             <div class="p-4 text-center text-muted">
                 <i class="bi bi-inbox display-6 d-block mb-2 opacity-50"></i>
-                No orders yet. Start from <a href="{% url 'pos:dashboard' %}">POS</a>.
+                No orders today. <a href="{% url 'pos:dashboard' %}">Open POS</a> to start.
             </div>
             {% endif %}
         </div>
     </div>
     <div class="col-lg-4">
-        <div class="panel h-100 mb-3">
+        <div class="panel mb-3">
             <div class="panel-header"><i class="bi bi-building text-primary me-2"></i>Staff by department</div>
             <div class="p-3 px-4">
                 {% if dept_breakdown %}
@@ -371,12 +437,12 @@
             </div>
         </div>
         <div class="panel">
-            <div class="panel-header"><i class="bi bi-diagram-3 text-primary me-2"></i>Workflow</div>
-            <div class="p-3 px-4">
-                <p class="workflow-step"><span class="workflow-num">1</span> Scan card at <strong>POS</strong></p>
-                <p class="workflow-step"><span class="workflow-num">2</span> Order in <strong>Kitchen</strong></p>
-                <p class="workflow-step"><span class="workflow-num">3</span> Mark <strong>Ready</strong></p>
-                <p class="workflow-step mb-0"><span class="workflow-num">4</span> <strong>Distribution</strong> handover</p>
+            <div class="panel-header"><i class="bi bi-diagram-3 text-primary me-2"></i>How it works</div>
+            <div class="p-3 px-4 small text-muted">
+                <p class="mb-2"><strong class="text-dark">1.</strong> Employee scans card at POS</p>
+                <p class="mb-2"><strong class="text-dark">2.</strong> Order appears on Kitchen KDS</p>
+                <p class="mb-2"><strong class="text-dark">3.</strong> Staff marks order ready</p>
+                <p class="mb-0"><strong class="text-dark">4.</strong> Distribution calls token &amp; delivers</p>
             </div>
         </div>
     </div>
@@ -384,24 +450,24 @@
 
 {% if user_is_admin %}
 <div class="panel mb-4">
-    <div class="panel-header"><i class="bi bi-grid text-primary me-2"></i>Admin modules</div>
+    <div class="panel-header"><i class="bi bi-grid text-primary me-2"></i>Admin shortcuts</div>
     <div class="p-3">
         <div class="row g-2">
             <div class="col-4 col-md-2"><a href="/admin/employee/employee/" class="module-tile"><i class="bi bi-people"></i>Employees</a></div>
-            <div class="col-4 col-md-2"><a href="/admin/employee/employeecard/" class="module-tile"><i class="bi bi-credit-card"></i>Cards</a></div>
+            <div class="col-4 col-md-2"><a href="/admin/inventory/dailyfoodstock/" class="module-tile"><i class="bi bi-calendar-day"></i>Daily stock</a></div>
             <div class="col-4 col-md-2"><a href="/admin/balance/employeebalance/" class="module-tile"><i class="bi bi-wallet2"></i>Balance</a></div>
             <div class="col-4 col-md-2"><a href="/admin/inventory/menuitem/" class="module-tile"><i class="bi bi-egg-fried"></i>Menu</a></div>
-            <div class="col-4 col-md-2"><a href="/admin/pos/order/" class="module-tile"><i class="bi bi-receipt"></i>Orders</a></div>
+            <div class="col-4 col-md-2"><a href="{% url 'core:settings' %}" class="module-tile"><i class="bi bi-gear"></i>Settings</a></div>
             <div class="col-4 col-md-2"><a href="/admin/users/user/" class="module-tile"><i class="bi bi-person-gear"></i>Users</a></div>
         </div>
     </div>
 </div>
 {% endif %}
 
-<div class="help-banner d-flex flex-wrap align-items-center justify-content-between gap-3">
+<div class="panel p-3 px-4 d-flex flex-wrap align-items-center justify-content-between gap-3">
     <div>
-        <h6 class="fw-bold mb-1"><i class="bi bi-info-circle text-primary me-2"></i>Need help?</h6>
-        <p class="text-muted small mb-0">User manual, ERD diagrams, and technical documentation.</p>
+        <h6 class="fw-bold mb-1"><i class="bi bi-info-circle text-primary me-2"></i>Documentation</h6>
+        <p class="text-muted small mb-0">User manual, diagrams, and technical reference.</p>
     </div>
     <div class="d-flex flex-wrap gap-2">
         <a href="{% url 'core:help_user_manual' %}" class="btn btn-primary btn-sm rounded-pill px-3">User Manual</a>
@@ -412,3 +478,37 @@
     </div>
 </div>
 {% endblock %}
+
+{% block page_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+(function () {
+    const labels = {{ trend_labels|safe }};
+    const values = {{ trend_values|safe }};
+    const el = document.getElementById('dashTrendChart');
+    if (!el || !labels.length) return;
+    new Chart(el, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Revenue (Tk)',
+                data: values,
+                backgroundColor: 'rgba(59, 130, 246, 0.75)',
+                borderColor: '#2563eb',
+                borderWidth: 1,
+                borderRadius: 8,
+            }],
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, ticks: { callback: v => 'Tk ' + v } },
+            },
+        },
+    });
+})();
+</script>
+{% endblock %}
+

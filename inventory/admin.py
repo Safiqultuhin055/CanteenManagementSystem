@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.utils.html import format_html
 
 from core.admin_base import CanteenModelAdmin
 from core.admin_forms import (
@@ -26,9 +27,47 @@ class FoodCategoryAdmin(CanteenModelAdmin):
 @admin.register(MenuItem)
 class MenuItemAdmin(CanteenModelAdmin):
     form = MenuItemAdminForm
-    list_display = ('item_name', 'item_code', 'category', 'unit_price', 'is_available', 'is_active')
+    list_display = (
+        'thumb_preview', 'item_name', 'item_code', 'category',
+        'unit_price', 'is_available', 'is_active',
+    )
     list_filter = ('category', 'is_available', 'is_vegetarian')
     search_fields = ('item_name', 'item_code')
+    readonly_fields = ('image_preview',)
+
+    fieldsets = (
+        (None, {
+            'fields': (
+                'item_name', 'item_code', 'category', 'description',
+                'unit_price', 'tax_rate', 'is_vegetarian',
+            ),
+        }),
+        ('Image (POS menu)', {
+            'fields': ('item_image', 'image_preview'),
+            'description': 'Upload a photo — shown on the POS menu. Recommended: square or 4:3, min 400px wide.',
+        }),
+        ('Status', {
+            'fields': ('is_available', 'is_active'),
+        }),
+    )
+
+    @admin.display(description='Photo')
+    def thumb_preview(self, obj):
+        if obj and obj.item_image:
+            return format_html(
+                '<img src="{}" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:6px;">',
+                obj.item_image.url,
+            )
+        return '—'
+
+    @admin.display(description='Current image')
+    def image_preview(self, obj):
+        if obj and obj.item_image:
+            return format_html(
+                '<img src="{}" alt="" style="max-width:280px;max-height:200px;border-radius:8px;object-fit:cover;">',
+                obj.item_image.url,
+            )
+        return format_html('<span style="color:#888;">No image — POS shows a placeholder icon.</span>')
 
 
 @admin.register(Supplier)

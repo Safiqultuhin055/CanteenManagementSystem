@@ -1,11 +1,26 @@
 from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import redirect, render
+from django.http import HttpResponseForbidden, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.http import require_GET, require_http_methods
+
+from users.db_schema import ensure_user_access_schema
+from users.permissions import is_admin_user, user_has_permission
 
 from .forms import LoginForm, PasswordChangeForm
+from .models import User
+from .services.menu_permission_service import (
+    backfill_menu_grants_from_permissions,
+    build_nested_menu_tree,
+    ensure_menu_permission_mappings,
+    ensure_user_menu_access_nav,
+    save_user_menu_permissions,
+    search_users,
+    toggle_user_menu_access,
+)
 from .services.auth_service import (
     authenticate_user,
     change_user_password,
@@ -130,3 +145,101 @@ def password_change_view(request):
         'forced': forced,
         'min_password_length': min_len,
     })
+
+
+def _can_assign_user_menus(user) -> bool:
+    if not user.is_authenticated:
+        return False
+    if getattr(user, 'is_superuser', False) or is_admin_user(user):
+        return True
+    return user_has_permission(user, 'USER_MENU_ASSIGN')
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def user_menu_permissions_view(request):
+    if not _can_assign_user_menus(request.user):
+        return HttpResponseForbidden('You cannot assign user menu permissions.')
+
+    selected_user = None
+    user_id = request.GET.get('user') or request.POST.get('user_id')
+    search_q = (request.GET.get('q') or request.POST.get('q') or '').strip()
+
+    if user_id:
+        try:
+            selected_user = get_object_or_404(
+                User, pk=int(user_id), is_deleted=False, is_active=True,
+            )
+        except (TypeError, ValueError):
+            selected_user = None
+
+    if request.method == 'POST' and selected_user:
+        if selected_user.is_superuser:
+            messages.error(request, 'Superuser access is not managed here.')
+        else:
+            menu_ids = request.POST.getlist('menu_ids')
+            count = save_user_menu_permissions(
+                selected_user.pk,
+                menu_ids,
+                request.user.pk,
+            )
+            messages.success(
+                request,
+                f'Saved menu access for {selected_user}. {count} permission(s) granted.',
+            )
+        return redirect(f'{reverse("users:user_menu_permissions")}?user={selected_user.pk}&q={search_q}')
+
+    ensure_user_access_schema()
+    ensure_user_menu_access_nav()
+    ensure_menu_permission_mappings()
+
+    users = search_users(search_q, limit=25)
+    if selected_user:
+        backfill_menu_grants_from_permissions(selected_user.pk, request.user.pk)
+    menu_tree = build_nested_menu_tree(selected_user.pk if selected_user else None)
+
+    return render(request, 'users/user_menu_permissions.html', {
+        'users': users,
+        'selected_user': selected_user,
+        'menu_tree': menu_tree,
+        'search_q': search_q,
+    })
+
+
+@login_required
+@require_GET
+def api_search_users(request):
+    if not _can_assign_user_menus(request.user):
+        return JsonResponse({'results': []}, status=403)
+    q = (request.GET.get('q') or '').strip()
+    results = [
+        {
+            'id': u.pk,
+            'username': u.username,
+            'full_name': u.full_name or '',
+            'label': f'{u.full_name or u.username} ({u.username})',
+        }
+        for u in search_users(q, limit=15)
+    ]
+    return JsonResponse({'results': results})
+
+
+@login_required
+@require_http_methods(['POST'])
+def api_toggle_user_menu(request):
+    if not _can_assign_user_menus(request.user):
+        return JsonResponse({'ok': False, 'error': 'Forbidden'}, status=403)
+    try:
+        user_id = int(request.POST.get('user_id', ''))
+        menu_id = int(request.POST.get('menu_id', ''))
+    except (TypeError, ValueError):
+        return JsonResponse({'ok': False, 'error': 'Invalid user or menu id'}, status=400)
+
+    target = get_object_or_404(User, pk=user_id, is_deleted=False, is_active=True)
+    if target.is_superuser:
+        return JsonResponse({'ok': False, 'error': 'Cannot modify superuser menus'}, status=400)
+
+    grant = request.POST.get('grant') in ('1', 'true', 'on', 'yes')
+    result = toggle_user_menu_access(user_id, menu_id, grant, request.user.pk)
+    status = 200 if result.get('ok') else 400
+    return JsonResponse(result, status=status)

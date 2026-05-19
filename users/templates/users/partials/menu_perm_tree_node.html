@@ -1,0 +1,43 @@
+{% for node in nodes %}
+<li class="menu-tree-item {% if node.has_children %}has-children{% endif %}" data-menu-id="{{ node.menu.pk }}">
+    <div class="menu-tree-row {% if not node.has_mapping %}disabled{% endif %}">
+        {% if node.has_children %}
+        <button type="button" class="tree-toggle btn btn-link p-0 text-secondary" aria-expanded="true" title="Expand/collapse">
+            <i class="bi bi-chevron-down"></i>
+        </button>
+        {% else %}
+        <span class="tree-spacer"></span>
+        {% endif %}
+        <label class="menu-tree-label mb-0 flex-grow-1">
+            <input type="checkbox" class="menu-check menu-cb" name="menu_ids" value="{{ node.menu.pk }}"
+                   data-menu-id="{{ node.menu.pk }}"
+                   {% if node.checked %}checked{% endif %}
+                   {% if not node.has_mapping %}disabled{% endif %}>
+            <span class="menu-tree-text">
+                <span class="fw-semibold">
+                    {% if node.menu.icon_class %}<i class="bi {{ node.menu.icon_class }} me-1 text-primary"></i>{% endif %}
+                    {{ node.menu.menu_name }}
+                    <small class="text-muted fw-normal">({{ node.menu.menu_code }})</small>
+                </span>
+                {% if node.menu.url %}
+                <small class="text-muted d-block">{{ node.menu.url }}</small>
+                {% endif %}
+                {% if node.permission_codes %}
+                <span class="perm-tags">
+                    {% for code in node.permission_codes %}
+                    <span class="perm-tag">{{ code }}</span>
+                    {% endfor %}
+                </span>
+                {% elif not node.has_mapping %}
+                <small class="text-warning d-block">No permission mapping</small>
+                {% endif %}
+            </span>
+        </label>
+    </div>
+    {% if node.children %}
+    <ul class="menu-tree-children list-unstyled">
+        {% include 'users/partials/menu_perm_tree_node.html' with nodes=node.children %}
+    </ul>
+    {% endif %}
+</li>
+{% endfor %}

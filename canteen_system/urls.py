@@ -21,7 +21,7 @@ from django.views.generic import RedirectView
 from django.views.static import serve
 
 urlpatterns = [
-    path('', RedirectView.as_view(url='/dashboard/', permanent=False)),
+    path('', RedirectView.as_view(pattern_name='core:dashboard', permanent=False)),
     path('admin/', admin.site.urls),
     path('users/', include('users.urls', namespace='users')),
     path('', include('core.urls', namespace='core')),
@@ -38,4 +38,5 @@ if settings.DEBUG:
             serve,
             {'document_root': settings.BASE_DIR / 'docs' / 'diagrams'},
         ),
+        path('media/<path:path>', serve, {'document_root': settings.MEDIA_ROOT}),
     ]

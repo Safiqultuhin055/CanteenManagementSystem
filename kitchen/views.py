@@ -2,12 +2,13 @@ import json
 import logging
 from django.contrib.auth.decorators import login_required
 from django.db import connection
-from django.http import JsonResponse
+from django.http import JsonResponse, StreamingHttpResponse
 from django.shortcuts import render
 from django.utils import timezone
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 from core.business_date import get_business_date
+from kitchen.realtime import current_version, notify_kitchen_queue_changed, wait_for_change
 from pos.models import Order, OrderDetail
 
 logger = logging.getLogger(__name__)
@@ -40,8 +41,8 @@ def _serialize_kitchen_entry(queue_row=None, order=None):
         }
 
     status = order.kitchen_status or 'PENDING'
-    if status == 'PREPARING':
-        status = 'IN_PROGRESS'
+    if status in ('PREPARING', 'IN_PROGRESS'):
+        status = 'PENDING'
     return {
         'id': None,
         'order_id': order.id,
@@ -79,14 +80,13 @@ def kds_dashboard(request):
     from kitchen.models import KitchenQueue
 
     pending = KitchenQueue.objects.filter(
-        queue_date=today, queue_status='PENDING', is_active=True
-    ).count()
-    preparing = KitchenQueue.objects.filter(
-        queue_date=today, queue_status='IN_PROGRESS', is_active=True
+        queue_date=today,
+        queue_status__in=['PENDING', 'IN_PROGRESS'],
+        is_active=True,
     ).count()
 
     return render(request, 'kitchen/kds.html', {
-        'stats': {'pending': pending, 'preparing': preparing, 'today': today},
+        'stats': {'pending': pending, 'today': today},
     })
 
 
@@ -110,7 +110,10 @@ def api_get_queue(request):
 
     for q in queues:
         if q.order and not q.order.is_deleted:
-            data.append(_serialize_kitchen_entry(queue_row=q))
+            entry = _serialize_kitchen_entry(queue_row=q)
+            if entry['status'] == 'IN_PROGRESS':
+                entry['status'] = 'PENDING'
+            data.append(entry)
             seen_orders.add(q.order_id)
 
     if not data:
@@ -152,14 +155,40 @@ def api_get_queue(request):
 
     return JsonResponse({
         'success': True,
+        'version': current_version(),
         'orders': data,
         'ready_pickup': ready_cards,
         'counts': {
-            'pending': sum(1 for o in data if o['status'] == 'PENDING'),
-            'preparing': sum(1 for o in data if o['status'] == 'IN_PROGRESS'),
+            'pending': len(data),
             'ready': len(ready_cards),
         },
     })
+
+
+@login_required
+@require_GET
+def api_kitchen_stream(request):
+    """SSE: push when POS sale or kitchen status changes (no polling)."""
+    try:
+        since = int(request.GET.get('since', 0))
+    except (TypeError, ValueError):
+        since = 0
+
+    def event_stream():
+        client_since = since
+        while True:
+            new_version = wait_for_change(client_since, timeout=25.0)
+            if new_version > client_since:
+                payload = json.dumps({'version': new_version})
+                yield f'event: update\ndata: {payload}\n\n'
+                client_since = new_version
+            else:
+                yield ': heartbeat\n\n'
+
+    response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
+    response['Cache-Control'] = 'no-cache, no-transform'
+    response['X-Accel-Buffering'] = 'no'
+    return response
 
 
 @login_required
@@ -172,7 +201,7 @@ def api_update_status(request):
         new_status = body.get('status')
         user_id = request.user.pk
 
-        if new_status not in ('IN_PROGRESS', 'READY'):
+        if new_status not in ('READY',):
             return JsonResponse({'success': False, 'message': 'Invalid status'})
 
         if queue_id:
@@ -202,6 +231,7 @@ def _update_via_sp(queue_id, new_status, user_id):
             )
             row = cursor.fetchone()
         if row and row[0]:
+            notify_kitchen_queue_changed()
             return JsonResponse({'success': True, 'message': row[1] if len(row) > 1 else 'Updated'})
         return JsonResponse({'success': False, 'message': row[1] if row else 'Update failed'})
     except Exception:
@@ -249,6 +279,7 @@ def _update_via_orm_queue(queue_id, new_status, user_id):
         from distribution.services import sync_ready_pickup_queue
         sync_ready_pickup_queue(q.queue_date or get_business_date())
 
+    notify_kitchen_queue_changed()
     return JsonResponse({
         'success': True,
         'message': pickup_msg,

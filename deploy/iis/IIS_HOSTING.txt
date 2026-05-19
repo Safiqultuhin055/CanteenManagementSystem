@@ -1,0 +1,149 @@
+================================================================================
+  Canteen Management System — IIS hosting (Windows)
+================================================================================
+
+AUTO CONFIGURE (recommended)
+----------------------------
+1. Right-click: deploy\iis\CONFIGURE_IIS.bat -> Run as administrator
+   OR in Admin PowerShell:
+     cd "E:\Python Project\CanteenManagementSystem"
+     .\deploy\iis\configure_iis_admin.ps1
+
+2. Edit .env using deploy\iis\env_iis_snippet.txt
+
+3. Open http://localhost/cms/dashboard/
+
+================================================================================
+
+PREREQUISITES
+-------------
+1. Windows: IIS enabled (Server Manager -> Web Server (IIS), or
+   "Turn Windows features on" -> Internet Information Services).
+
+2. Install HttpPlatformHandler (required for Django):
+   https://www.iis.net/downloads/microsoft/httpplatformhandler
+   Or: Web Platform Installer -> HttpPlatformHandler.
+
+3. Python 3.12+ venv in project folder with:
+     pip install -r requirements.txt
+
+4. SQL Server reachable from the IIS app pool identity.
+   For IIS, prefer SQL login in .env (not only Trusted_Connection):
+     DB_USER=...
+     DB_PASSWORD=...
+   Grant that login access to CanteenManagementDB.
+
+5. ODBC Driver 17 for SQL Server on the server.
+
+6. Database scripts in database/ already applied.
+
+
+ONE-TIME APP PREP
+-----------------
+Open PowerShell in project root:
+
+  cd "E:\Python Project\CanteenManagementSystem"
+  venv\Scripts\activate
+  pip install -r requirements.txt
+  copy .env.example .env
+  (edit .env — see below)
+  py manage.py publish
+
+This runs migrate, collectstatic, and permission sync.
+
+
+.env FOR IIS
+------------
+  DEBUG=False
+  SECRET_KEY=<long-random-string>
+  ALLOWED_HOSTS=localhost,127.0.0.1,YOUR_SERVER_NAME,YOUR_SERVER_IP
+  CSRF_TRUSTED_ORIGINS=http://localhost,http://YOUR_SERVER_NAME
+
+  DB_NAME=CanteenManagementDB
+  DB_HOST=your-sql-host
+  DB_USER=iis_app_user
+  DB_PASSWORD=...
+
+If the site is NOT at domain root (e.g. http://server/canteen/):
+  FORCE_SCRIPT_NAME=/canteen
+  STATIC_URL=/canteen/static/
+  MEDIA_URL=/canteen/media/
+
+
+CONFIGURE web.config
+--------------------
+1. Copy deploy\iis\web.config to project root (same folder as manage.py)
+   if not already there.
+
+2. Edit web.config:
+   - processPath  = full path to venv\Scripts\python.exe
+   - arguments    = full path to deploy\iis\run_iis.py (keep quotes if path has spaces)
+   - PYTHONPATH   = project root folder
+
+3. Create folder: logs\  (for stdoutLogFile)
+
+
+IIS SITE SETUP
+--------------
+1. IIS Manager -> Application Pools -> Add:
+   Name: CanteenCMS
+   .NET CLR version: No Managed Code
+   Identity: ApplicationPoolIdentity (or a domain user with DB rights)
+
+2. Sites -> Add Website (or Add Application under Default Web Site):
+   Site name: CanteenCMS
+   Physical path: E:\Python Project\CanteenManagementSystem
+   Binding: http, port 80, host name (optional)
+   Application pool: CanteenCMS
+
+3. Permissions on project folder for IIS:
+   - IIS_IUSRS: Read & execute on project
+   - App pool identity: Read on project; Modify on media\ and logs\
+
+4. Virtual directories (if static/media location blocks do not work):
+   - /static  -> physical: ...\staticfiles
+   - /media   -> physical: ...\media
+
+5. Start site. Browse http://localhost/ or your binding.
+
+6. Errors: check logs\iis_stdout*.log and Windows Event Viewer.
+
+
+SUB-APPLICATION /cms (Default Web Site -> cms)
+------------------------------------------------
+If IIS shows: Default Web Site -> cms  (alias /cms)
+
+  web.config must include:
+    FORCE_SCRIPT_NAME=/cms
+
+  .env must include:
+    FORCE_SCRIPT_NAME=/cms
+    CSRF_TRUSTED_ORIGINS=http://localhost,http://127.0.0.1
+
+  Open in browser (note /cms prefix):
+    http://localhost/cms/
+    http://localhost/cms/dashboard/
+    http://localhost/cms/distribution/display/
+
+  Application pool: No Managed Code (not ASP.NET v4).
+
+
+URLS AFTER DEPLOY (site at root)
+--------------------------------
+  Dashboard:     http://server/dashboard/
+  POS:           http://server/pos/
+  TV display:    http://server/distribution/display/
+
+Open Windows Firewall for port 80 if LAN TVs need access.
+
+
+TROUBLESHOOTING
+---------------
+- 502.5 / process failed: wrong python path, missing venv packages, or PYTHONPATH.
+- 500: check logs\iis_stdout; run "py manage.py check" on server.
+- Static 404: run "py manage.py collectstatic"; confirm staticfiles\ exists.
+- Media 404: confirm media\ folder and IIS read permission.
+- CSRF error: add site URL to CSRF_TRUSTED_ORIGINS in .env.
+- DB login failed: use SQL auth user granted to the database for app pool.
+
+================================================================================

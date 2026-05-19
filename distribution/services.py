@@ -99,6 +99,7 @@ def get_distribution_board(queue_date=None):
             'queue_id': dq.id,
             'status': dq.queue_status,
             'called': bool(dq.called_at),
+            'called_at': dq.called_at.isoformat() if dq.called_at else None,
             'customer': (
                 order.employee.full_name if order and order.employee
                 else (order.customer_name if order else 'Guest')
@@ -108,6 +109,12 @@ def get_distribution_board(queue_date=None):
             'item_summary': ', '.join(f"{i['quantity']}x {i['item_name']}" for i in items[:3]),
         })
 
+    now_serving = sorted(
+        [r for r in ready_details if r['called']],
+        key=lambda r: r['called_at'] or '',
+        reverse=True,
+    )
+
     picked_today = DistributionQueue.objects.filter(
         queue_date=queue_date, queue_status='PICKED_UP', is_active=True
     ).count()
@@ -116,5 +123,7 @@ def get_distribution_board(queue_date=None):
         'preparing': preparing,
         'ready': [r['token'] for r in ready_details],
         'ready_details': ready_details,
+        'now_serving': now_serving,
         'picked_today': picked_today,
+        'queue_date': queue_date.isoformat(),
     }

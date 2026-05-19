@@ -62,6 +62,10 @@ def _widgets_for_model(model, extra=None):
             w[field.name] = forms.Textarea(attrs=FORM_TEXTAREA)
         elif isinstance(field, (models.IntegerField, models.DecimalField, models.FloatField)):
             w[field.name] = forms.NumberInput(attrs=FORM_NUMBER)
+        elif isinstance(field, models.ImageField):
+            w[field.name] = forms.ClearableFileInput(attrs={**FORM_CONTROL, 'accept': 'image/*'})
+        elif isinstance(field, models.FileField):
+            w[field.name] = forms.ClearableFileInput(attrs=FORM_CONTROL)
         elif isinstance(field, models.DateField):
             w[field.name] = forms.DateInput(attrs={**FORM_CONTROL, 'type': 'date'})
         elif isinstance(field, models.DateTimeField):

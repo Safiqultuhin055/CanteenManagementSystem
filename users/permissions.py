@@ -1,6 +1,6 @@
 """Role and menu permission helpers."""
 
-from .models import Menu, MenuPermission, Permission, Role, UserRole
+from .models import Menu, MenuPermission, Permission, Role, UserMenuGrant, UserPermission, UserRole
 
 
 def user_role_codes(user) -> set[str]:
@@ -31,18 +31,52 @@ def user_permission_codes(user) -> set[str]:
         return set()
     if getattr(user, 'is_superuser', False):
         return set(Permission.objects.filter(is_active=True, is_deleted=False).values_list('permission_code', flat=True))
-    role_ids = list(UserRole.objects.filter(user_id=user.id, is_active=True, is_deleted=False).values_list('role_id', flat=True))
-    if not role_ids:
-        return set()
-    return set(
-        Permission.objects.filter(
-            is_active=True,
-            is_deleted=False,
-            rolepermission__role_id__in=role_ids,
-            rolepermission__is_active=True,
-            rolepermission__is_deleted=False,
-        ).values_list('permission_code', flat=True).distinct()
+
+    codes = set()
+    role_ids = list(
+        UserRole.objects.filter(user_id=user.id, is_active=True, is_deleted=False).values_list(
+            'role_id', flat=True,
+        )
     )
+    if role_ids:
+        codes.update(
+            Permission.objects.filter(
+                is_active=True,
+                is_deleted=False,
+                rolepermission__role_id__in=role_ids,
+                rolepermission__is_active=True,
+                rolepermission__is_deleted=False,
+            ).values_list('permission_code', flat=True).distinct()
+        )
+
+    direct_perm_ids = UserPermission.objects.filter(
+        user_id=user.id, is_active=True, is_deleted=False,
+    ).values_list('permission_id', flat=True)
+    if direct_perm_ids:
+        codes.update(
+            Permission.objects.filter(
+                id__in=direct_perm_ids, is_active=True, is_deleted=False,
+            ).values_list('permission_code', flat=True)
+        )
+
+    return codes
+
+
+def user_has_direct_menu_grants(user) -> bool:
+    """User was assigned menus via User menu access (explicit menu rows)."""
+    if not user.is_authenticated:
+        return False
+    return UserMenuGrant.objects.filter(
+        user_id=user.id, is_active=True, is_deleted=False,
+    ).exists()
+
+
+def user_menu_is_granted(user, menu_id: int) -> bool:
+    if not user.is_authenticated:
+        return False
+    return UserMenuGrant.objects.filter(
+        user_id=user.id, menu_id=menu_id, is_active=True, is_deleted=False,
+    ).exists()
 
 
 def user_has_permission(user, permission_code: str) -> bool:
@@ -54,9 +88,16 @@ def user_can_access_menu(user, menu: Menu) -> bool:
         return False
     if getattr(user, 'is_superuser', False):
         return True
-    perm_ids = MenuPermission.objects.filter(menu_id=menu.id, is_active=True).values_list('permission_id', flat=True)
+
+    perm_ids = list(
+        MenuPermission.objects.filter(menu_id=menu.id, is_active=True).values_list('permission_id', flat=True)
+    )
     if not perm_ids:
         return menu.menu_code in ('DASHBOARD', 'HELP', 'HELP_USER_MANUAL', 'HELP_DIAGRAMS')
+
+    if user_has_direct_menu_grants(user):
+        return user_menu_is_granted(user, menu.id)
+
     user_perms = user_permission_codes(user)
     menu_perm_codes = set(
         Permission.objects.filter(id__in=perm_ids, is_active=True).values_list('permission_code', flat=True)

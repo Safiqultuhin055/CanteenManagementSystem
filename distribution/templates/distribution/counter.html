@@ -3,141 +3,297 @@
 {% block title %}Distribution Counter{% endblock %}
 
 {% block page_title %}
-<h1 class="h4 mb-0 fw-bold"><i class="bi bi-box-seam text-primary me-2"></i>Distribution Counter</h1>
-<small class="text-muted d-block">{{ stats.today }} — Ready for pickup workflow</small>
+<span class="d-none d-md-inline text-muted small fw-semibold">Distribution</span>
 {% endblock %}
 
 {% block page_css %}
 <style>
-    .flow-steps { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
-    .flow-step {
-        flex: 1; min-width: 140px; padding: 0.65rem 0.85rem; border-radius: 10px;
-        background: #f8fafc; border: 1px solid #e2e8f0; font-size: 0.8rem;
+    .app-content { padding: 0 !important; }
+    .dist-page {
+        --dist-bg: #0c1222;
+        --dist-surface: rgba(30, 41, 59, 0.85);
+        --dist-border: rgba(148, 163, 184, 0.12);
+        --dist-ready: #22c55e;
+        --dist-kitchen: #f59e0b;
+        --dist-picked: #3b82f6;
+        min-height: calc(100vh - 56px);
+        background: var(--dist-bg);
+        color: #e2e8f0;
+        font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+        position: relative;
     }
-    .flow-step strong { display: block; color: #0f172a; }
-    .flow-step.active { border-color: #22c55e; background: #f0fdf4; }
-    .dist-stat { border-radius: 14px; padding: 1rem 1.15rem; background: #fff; border: 1px solid #e2e8f0; box-shadow: 0 2px 12px rgba(15,23,42,0.04); }
-    .dist-stat .val { font-size: 1.75rem; font-weight: 800; line-height: 1.1; }
+    .dist-page::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background:
+            radial-gradient(ellipse 70% 40% at 10% 0%, rgba(34, 197, 94, 0.1), transparent 50%),
+            radial-gradient(ellipse 50% 30% at 95% 90%, rgba(59, 130, 246, 0.08), transparent 45%);
+        pointer-events: none;
+    }
+    .dist-inner { position: relative; z-index: 1; padding: 0.85rem 1rem 1rem; max-width: 1680px; margin: 0 auto; }
+    .dist-top {
+        display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+        gap: 0.75rem; margin-bottom: 0.85rem;
+        padding-bottom: 0.75rem; border-bottom: 1px solid var(--dist-border);
+    }
+    .dist-brand { display: flex; align-items: center; gap: 0.65rem; }
+    .dist-brand-icon {
+        width: 40px; height: 40px; border-radius: 11px;
+        background: linear-gradient(135deg, #22c55e, #16a34a);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.1rem; color: #fff;
+        box-shadow: 0 4px 16px rgba(34, 197, 94, 0.35);
+    }
+    .dist-brand h1 { font-size: 1.05rem; font-weight: 800; margin: 0; color: #fff; letter-spacing: -0.02em; }
+    .dist-brand small { color: #94a3b8; font-size: 0.7rem; }
+    .dist-stats { display: flex; gap: 0.45rem; flex-wrap: wrap; }
+    .dist-stat {
+        display: flex; align-items: center; gap: 0.45rem;
+        padding: 0.4rem 0.75rem; border-radius: 10px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--dist-border);
+        font-size: 0.68rem; font-weight: 600; color: #94a3b8;
+    }
+    .dist-stat strong { font-size: 1.1rem; font-weight: 800; color: #fff; min-width: 1.25rem; text-align: center; }
+    .dist-stat.s-ready strong { color: var(--dist-ready); }
+    .dist-stat.s-kitchen strong { color: var(--dist-kitchen); }
+    .dist-stat.s-picked strong { color: var(--dist-picked); }
+    .dist-actions { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+    .dist-live {
+        display: inline-flex; align-items: center; gap: 0.35rem;
+        padding: 0.3rem 0.6rem; border-radius: 999px;
+        font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+        background: rgba(34, 197, 94, 0.15); color: #4ade80;
+        border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+    .dist-live.offline { background: rgba(239, 68, 68, 0.15); color: #f87171; border-color: rgba(239, 68, 68, 0.3); }
+    .dist-live-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: distPulse 1.5s ease infinite; }
+    .dist-live.offline .dist-live-dot { animation: none; }
+    @keyframes distPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+    .dist-btn {
+        padding: 0.35rem 0.7rem; border-radius: 8px; font-size: 0.72rem; font-weight: 600;
+        border: 1px solid var(--dist-border); color: #cbd5e1; background: rgba(255, 255, 255, 0.04);
+        text-decoration: none; transition: background 0.15s;
+    }
+    .dist-btn:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+    .dist-board { display: grid; grid-template-columns: 220px 1fr; gap: 0.65rem; min-height: 0; }
+    @media (max-width: 900px) { .dist-board { grid-template-columns: 1fr; } }
+    .dist-col {
+        background: var(--dist-surface);
+        backdrop-filter: blur(10px);
+        border-radius: 14px;
+        border: 1px solid var(--dist-border);
+        display: flex; flex-direction: column;
+        min-height: 280px;
+        max-height: calc(100vh - 160px);
+        overflow: hidden;
+    }
+    .dist-col.col-kitchen { border-top: 2px solid var(--dist-kitchen); }
+    .dist-col.col-ready { border-top: 2px solid var(--dist-ready); }
+    .dist-col-h {
+        padding: 0.55rem 0.7rem;
+        border-bottom: 1px solid var(--dist-border);
+        display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+        background: rgba(0, 0, 0, 0.12);
+        font-size: 0.78rem; font-weight: 800;
+    }
+    .dist-col-h .badge-count {
+        font-size: 0.65rem; padding: 0.15rem 0.45rem; border-radius: 999px;
+        background: rgba(255, 255, 255, 0.1); color: #fff;
+    }
+    .dist-col-body { padding: 0.5rem; overflow-y: auto; flex: 1; }
+    .dist-col-body.grid-ready {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+        gap: 0.45rem;
+        align-content: start;
+    }
+    .kitchen-chips { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+    .kitchen-chip {
+        font-size: 0.75rem; font-weight: 800; padding: 0.25rem 0.5rem;
+        border-radius: 6px; background: rgba(245, 158, 11, 0.2); color: #fbbf24;
+        border: 1px solid rgba(245, 158, 11, 0.25);
+    }
     .token-card {
-        border-radius: 14px; padding: 1rem; height: 100%;
-        background: #fff; border: 2px solid #bbf7d0;
-        box-shadow: 0 4px 16px rgba(22,163,74,0.12);
-        transition: transform 0.15s, box-shadow 0.15s;
+        background: linear-gradient(145deg, rgba(51, 65, 85, 0.95), rgba(30, 41, 59, 0.98));
+        border-radius: 10px;
+        padding: 0.45rem 0.5rem;
+        border: 1px solid rgba(34, 197, 94, 0.25);
+        animation: distCardIn 0.3s ease backwards;
     }
-    .token-card.called { border-color: #f59e0b; background: #fffbeb; animation: glow 1.5s ease-in-out infinite; }
-    .token-card .token-num { font-size: 2rem; font-weight: 800; color: #15803d; line-height: 1; }
-    .token-card.called .token-num { color: #b45309; }
-    .token-actions { display: flex; gap: 0.35rem; margin-top: 0.75rem; flex-wrap: wrap; }
-    .token-actions .btn { flex: 1; min-width: 70px; font-size: 0.75rem; padding: 0.35rem 0.5rem; }
-    .prep-chip {
-        display: inline-flex; align-items: center; justify-content: center;
-        min-width: 3.5rem; padding: 0.5rem 0.85rem; margin: 0.25rem;
-        border-radius: 10px; background: #fef3c7; color: #92400e; font-weight: 700;
+    .token-card.called {
+        border-color: rgba(245, 158, 11, 0.6);
+        background: linear-gradient(145deg, rgba(69, 50, 20, 0.5), rgba(30, 41, 59, 0.98));
+        animation: distCallGlow 1.2s ease-in-out infinite;
     }
-    .item-line { font-size: 0.78rem; color: #64748b; margin-top: 0.35rem; }
-    @keyframes glow {
-        0%, 100% { box-shadow: 0 4px 16px rgba(245,158,11,0.2); }
-        50% { box-shadow: 0 6px 24px rgba(245,158,11,0.45); }
+    @keyframes distCardIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    @keyframes distCallGlow {
+        0%, 100% { box-shadow: 0 0 0 rgba(245, 158, 11, 0); }
+        50% { box-shadow: 0 0 16px rgba(245, 158, 11, 0.35); }
     }
-    .search-box { max-width: 220px; }
+    .token-card .token-num {
+        font-size: 1.35rem; font-weight: 800; line-height: 1.1;
+        color: #4ade80; letter-spacing: -0.02em;
+    }
+    .token-card.called .token-num { color: #fbbf24; }
+    .token-card .cust { font-size: 0.68rem; font-weight: 600; color: #e2e8f0; margin-top: 0.15rem; }
+    .token-card .meta { font-size: 0.58rem; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .token-card .items {
+        font-size: 0.6rem; color: #cbd5e1; margin: 0.25rem 0;
+        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .token-actions { display: flex; gap: 0.25rem; margin-top: 0.3rem; }
+    .token-actions button {
+        flex: 1; border: none; border-radius: 6px;
+        font-size: 0.58rem; font-weight: 700; padding: 0.28rem 0.2rem;
+        cursor: pointer; transition: filter 0.15s;
+    }
+    .token-actions button:hover { filter: brightness(1.1); }
+    .btn-call { background: #f59e0b; color: #0f172a; }
+    .btn-deliver { background: #22c55e; color: #fff; }
+    .dist-search {
+        width: 100px; padding: 0.25rem 0.45rem; font-size: 0.72rem;
+        border-radius: 6px; border: 1px solid var(--dist-border);
+        background: rgba(0, 0, 0, 0.2); color: #fff;
+    }
+    .dist-search::placeholder { color: #64748b; }
+    .dist-empty {
+        grid-column: 1 / -1; text-align: center; padding: 2rem 0.5rem; color: #64748b;
+        font-size: 0.75rem; font-weight: 600;
+    }
+    .dist-empty i { display: block; font-size: 1.75rem; opacity: 0.35; margin-bottom: 0.5rem; }
+    .dist-toast-wrap {
+        position: fixed; bottom: 1rem; right: 1rem; z-index: 9999;
+        display: flex; flex-direction: column; gap: 0.4rem; pointer-events: none;
+    }
+    .dist-toast {
+        padding: 0.65rem 1rem; border-radius: 10px;
+        background: rgba(30, 41, 59, 0.98); border: 1px solid rgba(34, 197, 94, 0.4);
+        color: #fff; font-size: 0.8rem; font-weight: 600;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+        animation: distToastIn 0.35s ease;
+    }
+    .dist-toast.err { border-color: rgba(239, 68, 68, 0.5); }
+    @keyframes distToastIn { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: none; } }
 </style>
 {% endblock %}
 
 {% block page_content %}
-<div class="flow-steps">
-    <div class="flow-step"><strong>1. POS</strong>Order placed → kitchen queue</div>
-    <div class="flow-step"><strong>2. Kitchen</strong>Mark as <em>Ready</em> when cooked</div>
-    <div class="flow-step active"><strong>3. Here</strong>Token appears — call & deliver</div>
-</div>
+<div class="dist-page">
+    <div class="dist-inner">
+        <header class="dist-top">
+            <div class="dist-brand">
+                <div class="dist-brand-icon"><i class="bi bi-box-seam"></i></div>
+                <div>
+                    <h1>Distribution Counter</h1>
+                    <small>{{ stats.today }} · Call & deliver</small>
+                </div>
+            </div>
+            <div class="dist-stats">
+                <div class="dist-stat s-ready"><i class="bi bi-bag-check"></i> Ready <strong id="stat-ready">{{ stats.ready }}</strong></div>
+                <div class="dist-stat s-kitchen"><i class="bi bi-fire"></i> Kitchen <strong id="stat-preparing">{{ stats.preparing }}</strong></div>
+                <div class="dist-stat s-picked"><i class="bi bi-check2-all"></i> Done <strong id="stat-picked">{{ stats.picked }}</strong></div>
+            </div>
+            <div class="dist-actions">
+                <span class="dist-live" id="dist-live"><span class="dist-live-dot"></span> Live</span>
+                <a href="{% url 'kitchen:kds_dashboard' %}" class="dist-btn"><i class="bi bi-display"></i> Kitchen</a>
+                <a href="{% url 'distribution:token_display' %}" target="_blank" class="dist-btn"><i class="bi bi-tv"></i> TV</a>
+            </div>
+        </header>
 
-<div class="row g-3 mb-4">
-    <div class="col-md-4">
-        <div class="dist-stat border-start border-4 border-success">
-            <div class="text-muted small text-uppercase fw-semibold">Ready for pickup</div>
-            <div class="val text-success" id="stat-ready">{{ stats.ready }}</div>
+        <div class="dist-board">
+            <section class="dist-col col-kitchen">
+                <div class="dist-col-h">
+                    <span><i class="bi bi-hourglass-split me-1 text-warning"></i> In kitchen</span>
+                    <span class="badge-count" id="badge-kitchen">{{ stats.preparing }}</span>
+                </div>
+                <div class="dist-col-body" id="preparing-wrap">
+                    <span class="text-muted small">Loading…</span>
+                </div>
+            </section>
+
+            <section class="dist-col col-ready">
+                <div class="dist-col-h">
+                    <span class="text-success"><i class="bi bi-check2-circle me-1"></i> Ready for pickup</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <input type="number" class="dist-search" id="token-search" placeholder="Token #" min="1">
+                        <span class="badge-count" id="badge-ready">{{ stats.ready }}</span>
+                    </div>
+                </div>
+                <div class="dist-col-body grid-ready" id="ready-tokens-container">
+                    <div class="dist-empty">
+                        <i class="bi bi-inbox"></i>
+                        Kitchen-এ Mark ready করলে টোকেন এখানে আসবে
+                    </div>
+                </div>
+            </section>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="dist-stat border-start border-4 border-warning">
-            <div class="text-muted small text-uppercase fw-semibold">In kitchen</div>
-            <div class="val text-warning" id="stat-preparing">{{ stats.preparing }}</div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="dist-stat border-start border-4 border-primary">
-            <div class="text-muted small text-uppercase fw-semibold">Delivered today</div>
-            <div class="val text-primary" id="stat-picked">{{ stats.picked }}</div>
-        </div>
-    </div>
 </div>
 
-<div class="card border-0 shadow-sm mb-4">
-    <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <h5 class="mb-0 fw-bold"><i class="bi bi-fire text-warning me-2"></i>Preparing (kitchen)</h5>
-        <a href="{% url 'kitchen:kds_dashboard' %}" class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-display me-1"></i>Kitchen</a>
-        <a href="{% url 'distribution:token_display' %}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-tv me-1"></i>TV display</a>
-    </div>
-    <div class="card-body" id="preparing-wrap">
-        <span class="text-muted small">Loading…</span>
-    </div>
-</div>
-
-<div class="card border-0 shadow-sm">
-    <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <h5 class="mb-0 fw-bold text-success"><i class="bi bi-check2-circle me-2"></i>Ready for pickup</h5>
-        <input type="number" class="form-control form-control-sm search-box" id="token-search" placeholder="Token #…" min="1">
-    </div>
-    <div class="card-body">
-        <p class="text-muted small mb-3">
-            Kitchen-এ <strong>Mark ready</strong> করলে টোকেন এখানে আসে।
-            <strong>Call</strong> = TV-তে দেখান, <strong>Deliver</strong> = হাতে দিয়ে সম্পন্ন।
-        </p>
-        <div class="row g-3" id="ready-tokens-container">
-            <p class="text-muted mb-0 col-12">No tokens ready — kitchen-এ order ready করুন</p>
-        </div>
-    </div>
-</div>
-
-<div class="toast-container position-fixed bottom-0 end-0 p-3" id="dist-toast-wrap"></div>
+<div class="dist-toast-wrap" id="dist-toast-wrap"></div>
 {% endblock %}
 
 {% block page_js %}
 <script>
 const CSRF = (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '{{ csrf_token }}';
+const STREAM_URL = '{% url "kitchen:api_kitchen_stream" %}';
 let allReady = [];
+let queueVersion = 0;
+let streamSource = null;
 
-function showToast(msg, type) {
+function showToast(msg, isError) {
     const wrap = document.getElementById('dist-toast-wrap');
     const el = document.createElement('div');
-    el.className = 'toast align-items-center text-bg-' + (type === 'error' ? 'danger' : 'success') + ' border-0 show';
-    el.innerHTML = '<div class="d-flex"><div class="toast-body">' + msg + '</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>';
+    el.className = 'dist-toast' + (isError ? ' err' : '');
+    el.textContent = msg;
     wrap.appendChild(el);
     setTimeout(() => el.remove(), 4000);
 }
 
+function setLiveStatus(online) {
+    const el = document.getElementById('dist-live');
+    el.className = 'dist-live' + (online ? '' : ' offline');
+    el.innerHTML = '<span class="dist-live-dot"></span> ' + (online ? 'Live' : 'Reconnecting');
+}
+
+function applyBoard(data) {
+    if (!data.success) return;
+    if (typeof data.version === 'number') queueVersion = data.version;
+    renderPreparing(data.preparing || []);
+    allReady = data.ready_details || [];
+    renderReady(allReady);
+    const readyN = (data.ready || []).length;
+    const prepN = (data.preparing || []).length;
+    document.getElementById('stat-ready').textContent = readyN;
+    document.getElementById('stat-preparing').textContent = prepN;
+    document.getElementById('badge-ready').textContent = readyN;
+    document.getElementById('badge-kitchen').textContent = prepN;
+    if (data.picked_today !== undefined) {
+        document.getElementById('stat-picked').textContent = data.picked_today;
+    }
+}
+
 function fetchTokens() {
-    fetch('{% url "distribution:api_get_tokens" %}')
+    return fetch('{% url "distribution:api_get_tokens" %}', { credentials: 'same-origin' })
         .then(r => r.json())
         .then(data => {
-            if (!data.success) return;
-            renderPreparing(data.preparing || []);
-            allReady = data.ready_details || [];
-            renderReady(allReady);
-            document.getElementById('stat-ready').textContent = (data.ready || []).length;
-            document.getElementById('stat-preparing').textContent = (data.preparing || []).length;
-            if (data.picked_today !== undefined) {
-                document.getElementById('stat-picked').textContent = data.picked_today;
-            }
-        });
+            applyBoard(data);
+            setLiveStatus(true);
+            return data;
+        })
+        .catch(() => setLiveStatus(false));
 }
 
 function renderPreparing(list) {
     const wrap = document.getElementById('preparing-wrap');
     if (!list.length) {
-        wrap.innerHTML = '<span class="text-muted">No orders in kitchen right now</span>';
+        wrap.innerHTML = '<span class="text-muted small" style="font-size:0.7rem">No orders in kitchen</span>';
         return;
     }
-    wrap.innerHTML = list.map(t => '<span class="prep-chip">#' + t + '</span>').join('');
+    wrap.innerHTML = '<div class="kitchen-chips">' +
+        list.map(t => `<span class="kitchen-chip">#${t}</span>`).join('') + '</div>';
 }
 
 function renderReady(details) {
@@ -147,23 +303,26 @@ function renderReady(details) {
     if (q) filtered = details.filter(d => String(d.token).includes(q));
 
     if (!filtered.length) {
-        container.innerHTML = '<p class="text-muted mb-0 col-12">No tokens ready — kitchen-এ <strong>Mark ready</strong> করুন</p>';
+        container.innerHTML = `<div class="dist-empty"><i class="bi bi-inbox"></i>${
+            q ? 'No match for token #' + q : 'Kitchen-এ Mark ready করলে টোকেন এখানে আসবে'
+        }</div>`;
         return;
     }
-    container.innerHTML = filtered.map(d => {
+    container.innerHTML = filtered.map((d, i) => {
         const name = (d.customer || 'Guest').split(' ')[0];
-        const items = (d.items || []).map(i => i.quantity + 'x ' + i.item_name).join(', ') || (d.item_summary || '');
+        const items = (d.items || []).map(it => it.quantity + 'x ' + it.item_name).join(' · ') || (d.item_summary || '');
         const called = d.called ? ' called' : '';
-        return '<div class="col-12 col-sm-6 col-lg-4 col-xl-3">' +
-            '<div class="token-card' + called + '" data-token="' + d.token + '">' +
-            '<div class="token-num">#' + d.token + '</div>' +
-            '<div class="fw-semibold">' + name + '</div>' +
-            '<div class="small text-muted">' + (d.order_number || '') + '</div>' +
-            '<div class="item-line text-truncate" title="' + items + '">' + items + '</div>' +
-            '<div class="token-actions">' +
-            '<button type="button" class="btn btn-warning" onclick="callToken(' + d.token + ')"><i class="bi bi-megaphone"></i> Call</button>' +
-            '<button type="button" class="btn btn-success" onclick="markDelivered(' + d.token + ')"><i class="bi bi-check2"></i> Deliver</button>' +
-            '</div></div></div>';
+        const esc = s => String(s).replace(/"/g, '&quot;');
+        return `<article class="token-card${called}" style="animation-delay:${Math.min(i * 0.02, 0.25)}s" data-token="${d.token}">
+            <div class="token-num">#${d.token}</div>
+            <div class="cust">${esc(name)}</div>
+            <div class="meta">${esc(d.order_number || '')}</div>
+            <div class="items" title="${esc(items)}">${esc(items)}</div>
+            <div class="token-actions">
+                <button type="button" class="btn-call" onclick="callToken(${d.token})"><i class="bi bi-megaphone"></i> Call</button>
+                <button type="button" class="btn-deliver" onclick="markDelivered(${d.token})"><i class="bi bi-check2"></i> OK</button>
+            </div>
+        </article>`;
     }).join('');
 }
 
@@ -176,15 +335,13 @@ function callToken(token) {
     })
     .then(r => r.json())
     .then(data => {
-        if (data.success) {
-            showToast(data.message);
-            fetchTokens();
-        } else alert(data.message || 'Call failed');
+        if (data.success) { showToast(data.message); fetchTokens(); }
+        else showToast(data.message || 'Call failed', true);
     });
 }
 
 function markDelivered(token) {
-    if (!confirm('Token #' + token + ' — customer picked up?')) return;
+    if (!confirm('Token #' + token + ' — delivered to customer?')) return;
     fetch('{% url "distribution:api_mark_delivered" %}', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
@@ -193,15 +350,32 @@ function markDelivered(token) {
     })
     .then(r => r.json())
     .then(data => {
-        if (data.success) {
-            showToast('Token #' + token + ' delivered');
-            fetchTokens();
-        } else alert(data.message || 'Failed');
+        if (data.success) { showToast('Token #' + token + ' delivered'); fetchTokens(); }
+        else showToast(data.message || 'Failed', true);
     });
 }
 
-document.getElementById('token-search').addEventListener('input', function() { renderReady(allReady); });
-setInterval(fetchTokens, 3000);
-fetchTokens();
+function connectStream() {
+    if (streamSource) { streamSource.close(); streamSource = null; }
+    streamSource = new EventSource(STREAM_URL + '?since=' + encodeURIComponent(queueVersion));
+    streamSource.addEventListener('update', (ev) => {
+        try {
+            const p = JSON.parse(ev.data);
+            if (p.version) queueVersion = p.version;
+        } catch (e) {}
+        fetchTokens();
+    });
+    streamSource.onopen = () => setLiveStatus(true);
+    streamSource.onerror = () => {
+        setLiveStatus(false);
+        streamSource.close();
+        streamSource = null;
+        setTimeout(connectStream, 3000);
+    };
+}
+
+document.getElementById('token-search').addEventListener('input', () => renderReady(allReady));
+fetchTokens().then(() => connectStream());
+window.addEventListener('beforeunload', () => { if (streamSource) streamSource.close(); });
 </script>
 {% endblock %}

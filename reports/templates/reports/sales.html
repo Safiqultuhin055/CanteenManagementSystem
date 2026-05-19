@@ -1,4 +1,5 @@
 {% extends 'core/layout_app.html' %}
+{% load cms_extras %}
 
 {% block title %}Sales Report{% endblock %}
 
@@ -34,7 +35,7 @@
     <div class="col-6 col-md-3">
         <div class="report-stat border-start border-4 border-primary">
             <div class="small text-muted text-uppercase">Today revenue</div>
-            <div class="val text-primary">৳{{ revenue_today|floatformat:2 }}</div>
+            <div class="val text-primary">{{ revenue_today|taka }}</div>
         </div>
     </div>
     <div class="col-6 col-md-3">
@@ -46,7 +47,7 @@
     <div class="col-6 col-md-3">
         <div class="report-stat border-start border-4 border-warning">
             <div class="small text-muted text-uppercase">Credit today</div>
-            <div class="val text-warning">৳{{ credit_today|floatformat:2 }}</div>
+            <div class="val text-warning">{{ credit_today|taka }}</div>
         </div>
     </div>
     <div class="col-6 col-md-3">
@@ -86,7 +87,7 @@
                         <tr>
                             <td class="fw-semibold">{{ row.item_name }}</td>
                             <td>{{ row.qty }}</td>
-                            <td class="text-end text-success fw-semibold">৳{{ row.revenue|floatformat:2 }}</td>
+                            <td class="text-end text-success fw-semibold">{{ row.revenue|taka }}</td>
                         </tr>
                         {% empty %}
                         <tr><td colspan="3" class="text-muted text-center py-4">No sales in this period</td></tr>
@@ -109,7 +110,7 @@
                         <tr>
                             <td><span class="badge bg-secondary">#{{ o.token_number }}</span> {{ o.order_number }}</td>
                             <td>{% if o.employee %}{{ o.employee.full_name }}{% else %}{{ o.customer_name|default:"Guest" }}{% endif %}</td>
-                            <td class="text-end fw-semibold">৳{{ o.total_amount|floatformat:2 }}</td>
+                            <td class="text-end fw-semibold">{{ o.total_amount|taka }}</td>
                         </tr>
                         {% empty %}
                         <tr><td colspan="3" class="text-muted text-center py-3">No orders</td></tr>
@@ -135,7 +136,7 @@ new Chart(document.getElementById('salesTrendChart'), {
     data: {
         labels: trendLabels,
         datasets: [{
-            label: 'Revenue (৳)',
+            label: 'Revenue (Tk)',
             data: trendValues,
             borderColor: '#3b82f6',
             backgroundColor: 'rgba(59, 130, 246, 0.12)',

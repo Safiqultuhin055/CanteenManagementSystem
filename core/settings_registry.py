@@ -9,6 +9,7 @@ SETTINGS_SECTIONS = [
             {'name': 'Roles', 'icon': 'bi-shield-lock', 'url': '/admin/users/role/', 'code': 'roles'},
             {'name': 'Permissions', 'icon': 'bi-key', 'url': '/admin/users/permission/', 'code': 'permissions'},
             {'name': 'User roles', 'icon': 'bi-person-check', 'url': '/admin/users/userrole/', 'code': 'userroles'},
+            {'name': 'User menu access', 'icon': 'bi-ui-checks', 'url': '/users/menu-permissions/', 'code': 'usermenuperms'},
             {'name': 'Role permissions', 'icon': 'bi-shield-check', 'url': '/admin/users/rolepermission/', 'code': 'rolepermissions'},
         ],
     },

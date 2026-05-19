@@ -21,13 +21,29 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure--5!j$tg=@th+l)!8267dajjwy-1u3ura8ba0(50%p7awmrqg6s'
+SECRET_KEY = config(
+    'SECRET_KEY',
+    default='django-insecure--5!j$tg=@th+l)!8267dajjwy-1u3ura8ba0(50%p7awmrqg6s',
+)
+
+_csrf_origins = config('CSRF_TRUSTED_ORIGINS', default='')
+CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_origins.split(',') if o.strip()]
+
+_force_script = config('FORCE_SCRIPT_NAME', default='')
+if _force_script:
+    FORCE_SCRIPT_NAME = _force_script.rstrip('/')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
-
+ALLOWED_HOSTS = [
+    h.strip()
+    for h in config(
+        'ALLOWED_HOSTS',
+        default='127.0.0.1,localhost,192.168.120.51,192.168.153.248',
+    ).split(',')
+    if h.strip()
+]
 
 # Application definition
 
@@ -74,8 +90,12 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'django.template.context_processors.media',
                 'core.context_processors.navigation',
             ],
+            'libraries': {
+                'cms_extras': 'core.templatetags.cms_extras',
+            },
         },
     },
 ]
@@ -138,8 +158,35 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = config('STATIC_URL', default='/static/')
 STATICFILES_DIRS = [BASE_DIR / 'static']
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+MEDIA_URL = config('MEDIA_URL', default='/media/')
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# IIS / production logging
+LOGS_DIR = BASE_DIR / 'logs'
+LOGS_DIR.mkdir(exist_ok=True)
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'file': {
+            'level': 'WARNING',
+            'class': 'logging.FileHandler',
+            'filename': LOGS_DIR / 'django.log',
+        },
+    },
+    'root': {
+        'handlers': ['file'],
+        'level': 'WARNING',
+    },
+}
+
+_db_user = config('DB_USER', default='')
+if _db_user:
+    DATABASES['default']['OPTIONS']['extra_params'] = 'TrustServerCertificate=yes;'
 
 LOGIN_URL = 'users:login'
 LOGIN_REDIRECT_URL = 'core:dashboard'

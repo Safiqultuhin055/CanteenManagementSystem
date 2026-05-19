@@ -68,6 +68,7 @@ class CustomUserAdmin(UserAdmin):
     form = CanteenUserChangeForm
     add_form = CanteenUserCreationForm
     model = User
+    filter_horizontal = ()
     list_display = ('username', 'email', 'full_name', 'employee', 'is_active', 'is_staff', 'is_superuser')
     list_filter = ('is_active', 'is_staff', 'is_superuser')
     search_fields = ('username', 'email', 'full_name', 'employee__employee_code', 'employee__full_name')
