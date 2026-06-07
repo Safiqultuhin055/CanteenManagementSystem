@@ -193,10 +193,16 @@ class FoodCategoryAdminForm(CanteenAdminModelForm):
 
 
 class MenuItemAdminForm(CanteenAdminModelForm):
+    image_upload = forms.ImageField(
+        required=False,
+        label='Upload image',
+        help_text='Saved in SQL Server (image_data BLOB), not as a media file.',
+    )
+
     class Meta:
         model = MenuItem
         fields = '__all__'
-        exclude = _COMMON_EXCLUDE
+        exclude = _COMMON_EXCLUDE + ('image_data', 'image_content_type', 'image_path')
         widgets = _widgets_for_model(MenuItem)
 
 

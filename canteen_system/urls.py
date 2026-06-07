@@ -29,6 +29,7 @@ urlpatterns = [
     path('kitchen/', include('kitchen.urls', namespace='kitchen')),
     path('distribution/', include('distribution.urls', namespace='distribution')),
     path('reports/', include('reports.urls', namespace='reports')),
+    path('inventory/', include('inventory.urls', namespace='inventory')),
 ]
 
 if settings.DEBUG:

@@ -2,6 +2,7 @@ import json
 import logging
 
 from django.contrib.auth.decorators import login_required
+from django.db.models import BooleanField, Case, Value, When
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_POST
@@ -51,9 +52,21 @@ def _find_employee_card(card_number: str):
 @login_required
 def pos_dashboard(request):
     categories = FoodCategory.objects.filter(is_active=True, is_deleted=False).order_by('category_name')
-    menu_items = MenuItem.objects.filter(
-        is_active=True, is_available=True, is_deleted=False
-    ).select_related('category').order_by('category__category_name', 'item_name')
+    menu_items = (
+        MenuItem.objects.filter(
+            is_active=True, is_available=True, is_deleted=False,
+        )
+        .annotate(
+            _has_image=Case(
+                When(image_data__isnull=False, then=Value(True)),
+                default=Value(False),
+                output_field=BooleanField(),
+            ),
+        )
+        .defer('image_data')
+        .select_related('category')
+        .order_by('category__category_name', 'item_name')
+    )
     menu_stock = build_pos_menu_stock(menu_items)
     return render(request, 'pos/pos_dashboard.html', {
         'categories': categories,

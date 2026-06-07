@@ -197,6 +197,14 @@ _db_user = config('DB_USER', default='')
 if _db_user:
     DATABASES['default']['OPTIONS']['extra_params'] = 'TrustServerCertificate=yes;'
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'canteen-menu-images',
+        'OPTIONS': {'MAX_ENTRIES': 1000},
+    }
+}
+
 LOGIN_URL = 'users:login'
 LOGIN_REDIRECT_URL = 'core:dashboard'
 LOGOUT_REDIRECT_URL = 'users:login'

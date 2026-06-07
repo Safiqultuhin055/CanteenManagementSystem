@@ -11,6 +11,7 @@ from core.admin_forms import (
     SupplierAdminForm,
     WasteRecordAdminForm,
 )
+from inventory.services.menu_image import save_menu_item_image_bytes
 from .models import (
     DailyFoodStock, FoodCategory, MenuItem, RawMaterial,
     RawMaterialStock, Supplier, WasteRecord,
@@ -35,6 +36,17 @@ class MenuItemAdmin(CanteenModelAdmin):
     search_fields = ('item_name', 'item_code')
     readonly_fields = ('image_preview',)
 
+    def get_queryset(self, request):
+        from django.db.models import BooleanField, Case, Value, When
+        qs = super().get_queryset(request)
+        return qs.annotate(
+            _has_image=Case(
+                When(image_data__isnull=False, then=Value(True)),
+                default=Value(False),
+                output_field=BooleanField(),
+            ),
+        ).defer('image_data')
+
     fieldsets = (
         (None, {
             'fields': (
@@ -43,29 +55,36 @@ class MenuItemAdmin(CanteenModelAdmin):
             ),
         }),
         ('Image (POS menu)', {
-            'fields': ('item_image', 'image_preview'),
-            'description': 'Upload a photo — shown on the POS menu. Recommended: square or 4:3, min 400px wide.',
+            'fields': ('image_upload', 'image_preview'),
+            'description': 'Image is stored in database (image_data BLOB), not in media folder.',
         }),
         ('Status', {
             'fields': ('is_available', 'is_active'),
         }),
     )
 
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        upload = form.cleaned_data.get('image_upload')
+        if upload:
+            content_type = getattr(upload, 'content_type', None) or 'image/png'
+            save_menu_item_image_bytes(obj, upload.read(), content_type)
+
     @admin.display(description='Photo')
     def thumb_preview(self, obj):
-        if obj and obj.item_image:
+        if obj and obj.has_image:
             return format_html(
                 '<img src="{}" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:6px;">',
-                obj.item_image.url,
+                obj.get_image_url(),
             )
         return '—'
 
     @admin.display(description='Current image')
     def image_preview(self, obj):
-        if obj and obj.item_image:
+        if obj and obj.has_image:
             return format_html(
                 '<img src="{}" alt="" style="max-width:280px;max-height:200px;border-radius:8px;object-fit:cover;">',
-                obj.item_image.url,
+                obj.get_image_url(),
             )
         return format_html('<span style="color:#888;">No image — POS shows a placeholder icon.</span>')
 

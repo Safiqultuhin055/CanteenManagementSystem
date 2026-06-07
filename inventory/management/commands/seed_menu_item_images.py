@@ -9,7 +9,6 @@ Usage:
   py manage.py seed_menu_item_images
   py manage.py seed_menu_item_images --force
 """
-from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from inventory.models import MenuItem
@@ -18,7 +17,7 @@ from inventory.services.menu_product_art import render_menu_product_image
 
 
 class Command(BaseCommand):
-    help = 'Generate product cutout PNGs for menu items and save to image_path.'
+    help = 'Generate product cutout PNGs and save to menu_items.image_data (BLOB).'
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -39,11 +38,8 @@ class Command(BaseCommand):
         created = 0
         skipped = 0
 
-        settings.MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
-        (settings.MEDIA_ROOT / 'menu_items').mkdir(parents=True, exist_ok=True)
-
         for item in items:
-            if item.item_image and not force:
+            if item.has_image and not force:
                 skipped += 1
                 continue
 
@@ -52,9 +48,9 @@ class Command(BaseCommand):
                 item.item_name,
                 item.is_vegetarian,
             )
-            rel = assign_image_from_bytes(item, data, ext='png')
+            assign_image_from_bytes(item, data, ext='png')
             created += 1
-            self.stdout.write(f'  {item.item_code}: {rel}')
+            self.stdout.write(f'  {item.item_code}: saved to database BLOB')
 
         self.stdout.write(
             self.style.SUCCESS(

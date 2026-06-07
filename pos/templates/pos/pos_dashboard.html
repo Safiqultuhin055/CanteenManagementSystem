@@ -1000,8 +1000,8 @@
                              data-sold-out="{% if row.sold_out %}1{% else %}0{% endif %}">
                             <span class="menu-card-qty" aria-hidden="true"></span>
                             <div class="menu-card-image">
-                                {% if item.item_image %}
-                                <img src="{{ item.item_image.url }}" alt="{{ item.item_name }}" class="menu-card-img" loading="lazy" decoding="async">
+                                {% if item.has_image %}
+                                <img src="{{ item.get_image_url }}" alt="{{ item.item_name }}" class="menu-card-img" loading="lazy" decoding="async">
                                 {% else %}
                                 <span class="menu-card-placeholder" aria-hidden="true">{% if item.is_vegetarian %}🥗{% else %}🍽️{% endif %}</span>
                                 {% endif %}

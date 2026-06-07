@@ -26,12 +26,9 @@ class MenuItem(models.Model):
     unit_price = models.DecimalField(max_digits=18, decimal_places=2)
     tax_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     is_vegetarian = models.BooleanField(default=False)
-    item_image = models.ImageField(
-        upload_to='menu_items/',
-        blank=True,
-        null=True,
-        db_column='image_path',
-    )
+    image_path = models.CharField(max_length=500, blank=True, null=True)
+    image_data = models.BinaryField(blank=True, null=True, db_column='image_data')
+    image_content_type = models.CharField(max_length=100, blank=True, null=True)
     is_active = models.BooleanField(default=True)
     is_available = models.BooleanField(default=True)
     is_deleted = models.BooleanField(default=False)
@@ -47,7 +44,16 @@ class MenuItem(models.Model):
 
     @property
     def has_image(self):
-        return bool(self.item_image)
+        if hasattr(self, '_has_image'):
+            return bool(self._has_image)
+        from inventory.services.menu_image_cache import item_has_image
+        return item_has_image(self.pk)
+
+    def get_image_url(self):
+        if not self.has_image:
+            return None
+        from django.urls import reverse
+        return reverse('inventory:menu_item_image', args=[self.pk])
 
 class Supplier(models.Model):
     supplier_name = models.CharField(max_length=200, unique=True)

@@ -1,45 +1,49 @@
-"""Helpers for menu item images on disk and in SQL Server."""
-from pathlib import Path
-
-from django.conf import settings
+"""Menu item images stored in SQL Server (menu_items.image_data BLOB)."""
 from django.db import connection
 
 from inventory.models import MenuItem
+from inventory.services.menu_image_cache import invalidate_menu_item_image, item_has_image
+
+CONTENT_TYPES = {
+    'png': 'image/png',
+    'jpg': 'image/jpeg',
+    'jpeg': 'image/jpeg',
+    'webp': 'image/webp',
+    'gif': 'image/gif',
+}
 
 
-def relative_image_path(item_code: str, ext: str = 'jpg') -> str:
-    safe = ''.join(c if c.isalnum() or c in '-_' else '_' for c in (item_code or 'item'))
-    return f'menu_items/{safe}.{ext}'
+def content_type_for_ext(ext: str) -> str:
+    return CONTENT_TYPES.get((ext or 'png').lower().lstrip('.'), 'application/octet-stream')
 
 
-def save_menu_item_image_file(item: MenuItem, source_path: Path) -> str:
-    """Write file under MEDIA_ROOT and update menu_items.image_path."""
-    rel = relative_image_path(item.item_code, source_path.suffix.lstrip('.') or 'jpg')
-    dest_dir = settings.MEDIA_ROOT / 'menu_items'
-    dest_dir.mkdir(parents=True, exist_ok=True)
-    dest = settings.MEDIA_ROOT / rel
-
-    with open(source_path, 'rb') as src:
-        dest.write_bytes(src.read())
-
+def save_menu_item_image_bytes(item: MenuItem, data: bytes, content_type: str = 'image/png') -> None:
+    """Write image bytes to menu_items.image_data (+ content type)."""
     with connection.cursor() as cursor:
         cursor.execute(
-            'UPDATE menu_items SET image_path = %s WHERE id = %s',
-            [rel.replace('\\', '/'), item.id],
+            """
+            UPDATE menu_items
+            SET image_data = %s,
+                image_content_type = %s,
+                image_path = NULL,
+                updated_at = SYSDATETIME()
+            WHERE id = %s
+            """,
+            [data, content_type, item.pk],
         )
+    invalidate_menu_item_image(item.pk)
 
-    return rel
+
+def assign_image_from_bytes(item: MenuItem, data: bytes, ext: str = 'png') -> str:
+    content_type = content_type_for_ext(ext)
+    save_menu_item_image_bytes(item, data, content_type)
+    return content_type
 
 
-def assign_image_from_bytes(item: MenuItem, data: bytes, ext: str = 'jpg') -> str:
-    rel = relative_image_path(item.item_code, ext)
-    dest = settings.MEDIA_ROOT / rel
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    dest.write_bytes(data)
-
-    with connection.cursor() as cursor:
-        cursor.execute(
-            'UPDATE menu_items SET image_path = %s WHERE id = %s',
-            [rel, item.id],
-        )
-    return rel
+__all__ = [
+    'CONTENT_TYPES',
+    'assign_image_from_bytes',
+    'content_type_for_ext',
+    'item_has_image',
+    'save_menu_item_image_bytes',
+]
