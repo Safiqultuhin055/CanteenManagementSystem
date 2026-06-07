@@ -124,9 +124,9 @@ SELECT
     al.[user_id],
     u.[username],
     u.[full_name],
-    al.[action],
+    al.[activity_type] AS [action],
     al.[module],
-    al.[description],
+    al.[page_url] AS [description],
     al.[ip_address],
     al.[created_at]
 FROM [dbo].[activity_logs] al

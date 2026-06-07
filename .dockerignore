@@ -1,0 +1,16 @@
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.git/
+.gitignore
+.env
+.env.*
+!.env.example
+logs/
+staticfiles/
+media/
+*.log
+.idea/
+.vscode/
+deploy/docker/.env

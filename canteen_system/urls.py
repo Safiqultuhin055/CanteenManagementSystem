@@ -38,5 +38,9 @@ if settings.DEBUG:
             serve,
             {'document_root': settings.BASE_DIR / 'docs' / 'diagrams'},
         ),
-        path('media/<path:path>', serve, {'document_root': settings.MEDIA_ROOT}),
     ]
+
+# Media uploads (menu images) — serve in Docker/LAN even when DEBUG=False
+urlpatterns += [
+    path('media/<path:path>', serve, {'document_root': settings.MEDIA_ROOT}),
+]

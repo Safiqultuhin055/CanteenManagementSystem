@@ -18,16 +18,40 @@ venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-2. Copy `.env.example` to `.env` and set database values.
+2. Copy `.env.shared.example` to `.env` (shared SQL Server — recommended for team/LAN):
 
-3. Run database scripts in `database/` (start with `00_RUN_ALL.sql`).
+```bash
+copy .env.shared.example .env
+```
 
-4. Migrate and run the server:
+Shared server (local dev **and** Docker use the same database):
+
+| Setting | Value |
+|---------|-------|
+| Host | `192.168.153.248` |
+| Database | `CanteenManagementDB` |
+| User | `sa` |
+
+Run **either** local `runserver` **or** Docker — not both at once (same DB).
+
+3. Run database scripts in `database/` on the server if the DB is new (see `deploy/docker/init-db.ps1`).
+
+4. Migrate and run locally:
 
 ```bash
 python manage.py migrate
 python manage.py runserver
 ```
+
+## Docker (LAN host on port 365)
+
+```powershell
+powershell -ExecutionPolicy Bypass -File deploy\docker\docker-start.ps1
+```
+
+Open: http://192.168.120.51:365/users/login/
+
+Uses the same `CanteenManagementDB` on `192.168.153.248` as local dev.
 
 Default superuser (from seed data): `superadmin` / `Admin@123`
 

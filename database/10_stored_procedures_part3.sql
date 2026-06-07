@@ -179,7 +179,7 @@ BEGIN
     BEGIN TRY
         BEGIN TRANSACTION;
 
-        DECLARE @OrderId INT, @TokenNumber INT, @OldStatus NVARCHAR(20);
+        DECLARE @OrderId INT, @TokenNumber INT, @OldStatus NVARCHAR(20), @AuditDesc NVARCHAR(500);
 
         SELECT @OrderId = [order_id], @TokenNumber = [token_number], @OldStatus = [queue_status]
         FROM [dbo].[kitchen_queue]
@@ -221,13 +221,15 @@ BEGIN
             END
         END
 
+        SET @AuditDesc = CONCAT(@OldStatus, N' -> ', @NewStatus);
+
         EXEC [dbo].[usp_InsertAuditLog]
             @UserId = @UpdatedBy,
             @Action = N'KITCHEN_STATUS_UPDATE',
             @TableName = N'kitchen_queue',
             @RecordId = @QueueId,
             @Module = N'Kitchen',
-            @Description = CONCAT(N'Status: ', @OldStatus, N' -> ', @NewStatus);
+            @Description = @AuditDesc
 
         COMMIT TRANSACTION;
         SELECT 1 AS [Success], N'Kitchen status updated' AS [Message];
@@ -255,7 +257,7 @@ BEGIN
     BEGIN TRY
         BEGIN TRANSACTION;
 
-        DECLARE @QueueId INT, @OrderId INT, @OldStatus NVARCHAR(20);
+        DECLARE @QueueId INT, @OrderId INT, @OldStatus NVARCHAR(20), @AuditDesc NVARCHAR(500), @HistoryRemarks NVARCHAR(500);
 
         SELECT TOP 1
             @QueueId = [id],
@@ -285,11 +287,13 @@ BEGIN
             [updated_at] = SYSDATETIME()
         WHERE [id] = @OrderId;
 
+        SET @HistoryRemarks = CONCAT(N'Card verified ', CAST(@CardVerified AS NVARCHAR(5)), N' ', ISNULL(@Remarks, N''));
+        SET @AuditDesc = CONCAT(N'Token ', CAST(@TokenNumber AS NVARCHAR(20)), N' picked up');
+
         INSERT INTO [dbo].[token_status_history] (
             [order_id], [token_number], [status_from], [status_to], [status_type], [changed_by], [remarks]
         )
-        VALUES (@OrderId, @TokenNumber, @OldStatus, N'PICKED_UP', N'DISTRIBUTION', @HandledBy,
-                CONCAT(N'Card verified: ', CAST(@CardVerified AS NVARCHAR(5)), N'; ', ISNULL(@Remarks, N'')));
+        VALUES (@OrderId, @TokenNumber, @OldStatus, N'PICKED_UP', N'DISTRIBUTION', @HandledBy, @HistoryRemarks);
 
         EXEC [dbo].[usp_InsertAuditLog]
             @UserId = @HandledBy,
@@ -297,7 +301,7 @@ BEGIN
             @TableName = N'distribution_queue',
             @RecordId = @QueueId,
             @Module = N'Distribution',
-            @Description = CONCAT(N'Token ', @TokenNumber, N' picked up');
+            @Description = @AuditDesc
 
         COMMIT TRANSACTION;
         SELECT 1 AS [Success], N'Distribution completed' AS [Message];
@@ -361,6 +365,7 @@ BEGIN
         );
 
         DECLARE @OrderId INT = SCOPE_IDENTITY();
+        DECLARE @PosAuditDesc NVARCHAR(500) = @OrderNumber;
 
         DECLARE @DailyStockId INT;
         SELECT @DailyStockId = [id] FROM [dbo].[daily_food_stock]
@@ -393,7 +398,7 @@ BEGIN
 
         EXEC [dbo].[usp_InsertAuditLog] @UserId = @CreatedBy, @Action = N'CASH_SALE',
             @TableName = N'orders', @RecordId = @OrderId, @Module = N'POS',
-            @Description = CONCAT(N'Cash order ', @OrderNumber);
+            @Description = @PosAuditDesc
 
         COMMIT TRANSACTION;
         SELECT 1 AS [Success], N'Cash sale completed' AS [Message], @OrderNumber AS [order_number], @TokenNumber AS [token_number];
@@ -451,7 +456,7 @@ BEGIN
         VALUES (@RequestId, @MenuItemId, @ItemName, @Quantity, @UnitPrice, @LineTotal);
 
         INSERT INTO [dbo].[employee_request_approvals] ([request_id], [approval_level], [approver_id], [approval_status])
-        SELECT @RequestId, 1, [id], N'PENDING'
+        SELECT @RequestId, 1, u.[id], N'PENDING'
         FROM [dbo].[users] u
         INNER JOIN [dbo].[user_roles] ur ON u.[id] = ur.[user_id]
         INNER JOIN [dbo].[roles] r ON ur.[role_id] = r.[id]
@@ -515,8 +520,10 @@ BEGIN
             WHERE [request_id] = @RequestId AND [approver_id] = @ApproverId;
         END
 
+        DECLARE @AuditAction NVARCHAR(50) = CASE WHEN @Approve = 1 THEN N'REQUEST_APPROVED' ELSE N'REQUEST_REJECTED' END;
+
         EXEC [dbo].[usp_InsertAuditLog] @UserId = @ApproverId,
-            @Action = CASE WHEN @Approve = 1 THEN N'REQUEST_APPROVED' ELSE N'REQUEST_REJECTED' END,
+            @Action = @AuditAction,
             @TableName = N'employee_requests', @RecordId = @RequestId, @Module = N'Requests';
 
         COMMIT TRANSACTION;
@@ -550,11 +557,11 @@ BEGIN
 
     -- Low stock: raw materials below minimum OR daily food remaining < threshold
     INSERT INTO [dbo].[notifications] (
-        [notification_type], [title], [message], [reference_table], [reference_id], [priority], [created_by]
+        [notification_type], [title], [message], [reference_type], [reference_id], [severity], [created_by]
     )
     SELECT N'LOW_STOCK', N'Low Stock Alert',
-           CONCAT(rm.[material_name], N' stock is low: ', rms.[current_quantity], N' ', rm.[unit_of_measure]),
-           N'raw_materials', rm.[id], N'HIGH', @CreatedBy
+           CONCAT(rm.[material_name], N' stock is low at ', rms.[current_quantity], N' ', rm.[unit_of_measure]),
+           N'raw_materials', rm.[id], N'WARNING', @CreatedBy
     FROM [dbo].[raw_material_stock] rms
     INNER JOIN [dbo].[raw_materials] rm ON rms.[raw_material_id] = rm.[id]
     WHERE rms.[current_quantity] < ISNULL(rm.[minimum_stock_level], @LowStockThreshold)
@@ -567,11 +574,11 @@ BEGIN
 
     -- Expiry within N days on purchase detail batches
     INSERT INTO [dbo].[notifications] (
-        [notification_type], [title], [message], [reference_table], [reference_id], [priority], [created_by]
+        [notification_type], [title], [message], [reference_type], [reference_id], [severity], [created_by]
     )
     SELECT DISTINCT N'EXPIRY_ALERT', N'Expiry Alert',
            CONCAT(rm.[material_name], N' expires on ', CONVERT(NVARCHAR(10), spd.[expiry_date], 120)),
-           N'raw_materials', rm.[id], N'MEDIUM', @CreatedBy
+           N'raw_materials', rm.[id], N'WARNING', @CreatedBy
     FROM [dbo].[stock_purchase_details] spd
     INNER JOIN [dbo].[raw_materials] rm ON spd.[raw_material_id] = rm.[id]
     WHERE spd.[expiry_date] IS NOT NULL
