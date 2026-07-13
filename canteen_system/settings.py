@@ -174,9 +174,12 @@ STORAGES = {
 MEDIA_URL = config('MEDIA_URL', default='/media/')
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# Claude API — POS voice order assistant (blank key disables the mic feature)
+# POS voice assistant LLM keys — normally managed in the DB (admin → API
+# integrations). These .env values are only a fallback when no active DB row.
 ANTHROPIC_API_KEY = config('ANTHROPIC_API_KEY', default='')
 ANTHROPIC_MODEL = config('ANTHROPIC_MODEL', default='claude-sonnet-5')
+GEMINI_API_KEY = config('GEMINI_API_KEY', default='')
+GEMINI_MODEL = config('GEMINI_MODEL', default='gemini-flash-lite-latest')
 
 # IIS / production logging
 LOGS_DIR = BASE_DIR / 'logs'

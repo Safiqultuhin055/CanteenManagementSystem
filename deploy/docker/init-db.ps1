@@ -104,7 +104,10 @@ $scripts = @(
     "19_receipt_pos_settings.sql",
     "20_menu_item_image_path.sql",
     "21_report_submenus.sql",
-    "22_menu_item_image_blob.sql"
+    "22_menu_item_image_blob.sql",
+    "23_menu_item_bangla_name.sql",
+    "24_daily_stock_expired_date.sql",
+    "25_api_integrations.sql"
 )
 
 $optionalScripts = @(

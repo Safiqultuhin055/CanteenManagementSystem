@@ -22,7 +22,12 @@ _CACHE_TTL = 300  # seconds
 _SETTINGS_FALLBACK = {
     'anthropic': ('ANTHROPIC_API_KEY', 'ANTHROPIC_MODEL', 'claude-sonnet-5'),
     'openai': ('OPENAI_API_KEY', 'OPENAI_MODEL', ''),
+    'gemini': ('GEMINI_API_KEY', 'GEMINI_MODEL', 'gemini-2.0-flash'),
 }
+
+# Chat/LLM providers usable by the voice assistant. The active one runs.
+LLM_PROVIDERS = ('anthropic', 'gemini', 'openai')
+_LLM_CACHE_KEY = f'{_CACHE_PREFIX}__active_llm__'
 
 
 @dataclass
@@ -44,11 +49,61 @@ def _cache_key(provider: str) -> str:
 
 
 def invalidate(provider: str | None = None) -> None:
+    cache.delete(_LLM_CACHE_KEY)   # active-LLM choice may change on any edit
     if provider:
         cache.delete(_cache_key(provider))
     else:
         for p in _SETTINGS_FALLBACK:
             cache.delete(_cache_key(p))
+
+
+def get_active_llm() -> ApiConfig:
+    """Return the active chat/LLM integration — whichever provider is enabled.
+
+    Picks the active, non-deleted row among LLM_PROVIDERS (is_default first,
+    then most recently updated). Falls back to Anthropic settings/.env.
+    """
+    cached = cache.get(_LLM_CACHE_KEY)
+    if cached:
+        return ApiConfig(**cached)
+
+    from core.models import ApiIntegration
+    base = ApiIntegration.objects.filter(
+        provider__in=LLM_PROVIDERS, is_deleted=False,
+    )
+    row = (
+        base.filter(is_active=True)
+        .exclude(api_key__isnull=True)
+        .exclude(api_key='')
+        .order_by('-is_default', '-updated_at', '-id')
+        .first()
+    )
+    if row:
+        extra = {}
+        if row.extra_config:
+            try:
+                extra = json.loads(row.extra_config)
+            except (ValueError, TypeError):
+                extra = {}
+        config = ApiConfig(
+            provider=row.provider,
+            api_key=(row.api_key or '').strip(),
+            api_model=(row.api_model or '').strip(),
+            base_url=(row.base_url or '').strip(),
+            extra=extra,
+            source='db',
+        )
+    elif base.exists():
+        # Rows exist but none are active → intentionally disabled. Do NOT fall
+        # back to .env, so toggling every row off truly turns the API off.
+        config = ApiConfig('none', '', '', '', {}, 'none')
+    else:
+        # Empty table (fresh install) → allow .env fallback so nothing breaks.
+        config = _resolve_from_settings('anthropic') or ApiConfig(
+            'anthropic', '', '', '', {}, 'none')
+
+    cache.set(_LLM_CACHE_KEY, config.__dict__, _CACHE_TTL)
+    return config
 
 
 def get_integration(provider: str) -> ApiConfig:

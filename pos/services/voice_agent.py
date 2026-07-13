@@ -161,17 +161,15 @@ _TOOL = {
 # ---------------------------------------------------------------------------
 
 def run_voice_turn(*, history, customer_name=None, stock_date=None):
-    """Run one assistant turn.
+    """Run one assistant turn using whichever LLM integration is active.
 
     history: list of {'role': 'user'|'assistant', 'content': str}
     Returns a dict the view can hand straight back to the browser.
     """
-    from core.api_registry import get_integration
-    cfg = get_integration('anthropic')
+    from core.api_registry import get_active_llm
+    cfg = get_active_llm()
     if not cfg.is_configured:
-        raise VoiceAgentError('Voice assistant not configured — add an Anthropic API key')
-    api_key = cfg.api_key
-    model = cfg.api_model or getattr(settings, 'ANTHROPIC_MODEL', 'claude-sonnet-5')
+        raise VoiceAgentError('Voice assistant not configured — add an active API key')
 
     stock_date = stock_date or get_business_date()
     menu = build_menu_snapshot(stock_date)
@@ -191,6 +189,20 @@ def run_voice_turn(*, history, customer_name=None, stock_date=None):
     if not messages:
         raise VoiceAgentError('No conversation input')
 
+    if cfg.provider == 'gemini':
+        turn = _call_gemini(cfg, system, messages)
+    elif cfg.provider == 'anthropic':
+        turn = _call_anthropic(cfg, system, messages)
+    else:
+        raise VoiceAgentError(f'Unsupported voice provider: {cfg.provider}')
+
+    return _finalize(turn, menu_by_id)
+
+
+# ---- Anthropic (Claude) -----------------------------------------------------
+
+def _call_anthropic(cfg, system, messages):
+    model = cfg.api_model or 'claude-sonnet-5'
     payload = {
         'model': model,
         'max_tokens': _MAX_TOKENS,
@@ -200,31 +212,89 @@ def run_voice_turn(*, history, customer_name=None, stock_date=None):
         'tool_choice': {'type': 'tool', 'name': 'submit_turn'},
     }
     headers = {
-        'x-api-key': api_key,
+        'x-api-key': cfg.api_key,
         'anthropic-version': _API_VERSION,
         'content-type': 'application/json',
     }
-
     endpoint = cfg.base_url or _API_URL
     try:
         resp = requests.post(endpoint, headers=headers, json=payload, timeout=_TIMEOUT)
     except requests.RequestException as exc:
         logger.exception('Claude request failed')
         raise VoiceAgentError('Voice assistant unreachable') from exc
-
     if resp.status_code != 200:
-        # Never surface the raw body (may echo the key context); log server-side.
         logger.error('Claude API %s: %s', resp.status_code, resp.text[:500])
         raise VoiceAgentError(f'Voice assistant error ({resp.status_code})')
 
-    turn = _extract_tool_input(resp.json())
-    return _finalize(turn, menu_by_id)
-
-
-def _extract_tool_input(data):
-    for block in data.get('content', []):
+    for block in resp.json().get('content', []):
         if block.get('type') == 'tool_use' and block.get('name') == 'submit_turn':
             return block.get('input') or {}
+    raise VoiceAgentError('Voice assistant returned no order')
+
+
+# ---- Google AI Studio (Gemini) ---------------------------------------------
+
+_GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models'
+
+# JSON response schema mirroring the Anthropic tool (OpenAPI subset for Gemini).
+_GEMINI_SCHEMA = {
+    'type': 'object',
+    'properties': {
+        'reply_bn': {'type': 'string'},
+        'items': {
+            'type': 'array',
+            'items': {
+                'type': 'object',
+                'properties': {
+                    'menu_item_id': {'type': 'integer'},
+                    'quantity': {'type': 'integer'},
+                },
+                'required': ['menu_item_id', 'quantity'],
+            },
+        },
+        'needs_more_info': {'type': 'boolean'},
+        'ready_to_confirm': {'type': 'boolean'},
+    },
+    'required': ['reply_bn', 'items', 'needs_more_info', 'ready_to_confirm'],
+}
+
+
+def _call_gemini(cfg, system, messages):
+    model = cfg.api_model or 'gemini-2.0-flash'
+    contents = [
+        {'role': 'model' if m['role'] == 'assistant' else 'user',
+         'parts': [{'text': m['content']}]}
+        for m in messages
+    ]
+    payload = {
+        'systemInstruction': {'parts': [{'text': system}]},
+        'contents': contents,
+        'generationConfig': {
+            'responseMimeType': 'application/json',
+            'responseSchema': _GEMINI_SCHEMA,
+            'maxOutputTokens': _MAX_TOKENS,
+        },
+    }
+    base = cfg.base_url or _GEMINI_BASE
+    endpoint = f'{base.rstrip("/")}/{model}:generateContent'
+    headers = {'content-type': 'application/json', 'x-goog-api-key': cfg.api_key}
+    try:
+        resp = requests.post(endpoint, headers=headers, json=payload, timeout=_TIMEOUT)
+    except requests.RequestException as exc:
+        logger.exception('Gemini request failed')
+        raise VoiceAgentError('Voice assistant unreachable') from exc
+    if resp.status_code != 200:
+        logger.error('Gemini API %s: %s', resp.status_code, resp.text[:500])
+        raise VoiceAgentError(f'Voice assistant error ({resp.status_code})')
+
+    data = resp.json()
+    try:
+        parts = data['candidates'][0]['content']['parts']
+        text = ''.join(p.get('text', '') for p in parts)
+        return json.loads(text)
+    except (KeyError, IndexError, ValueError, TypeError) as exc:
+        logger.error('Gemini parse error: %s | %s', exc, str(data)[:400])
+        raise VoiceAgentError('Voice assistant returned no order') from exc
     raise VoiceAgentError('Voice assistant returned no order')
 
 

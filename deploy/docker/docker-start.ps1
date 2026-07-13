@@ -6,7 +6,11 @@ param(
     [string]$DbUser = "sa",
     [string]$DbPassword = "@Mis#Dev",
     [string]$DbName = "CanteenManagementDB",
-    [string]$SqlCmdContainer = "deploy-sqlserver-1"
+    [string]$SqlCmdContainer = "deploy-sqlserver-1",
+    [string]$AnthropicKey = "",
+    [string]$AnthropicModel = "claude-sonnet-5",
+    [string]$GeminiKey = "",
+    [string]$GeminiModel = "gemini-flash-lite-latest"
 )
 
 $ErrorActionPreference = "Stop"
@@ -37,7 +41,12 @@ $csrf = @(
     "SECRET_KEY=cms-docker-lan-change-in-production",
     "ALLOWED_HOSTS=127.0.0.1,localhost,$LanIp,192.168.153.248",
     "CSRF_TRUSTED_ORIGINS=$csrf",
-    "FORCE_SCRIPT_NAME="
+    "FORCE_SCRIPT_NAME=",
+    "# POS voice LLM keys — fallback only; prefer DB (admin -> API integrations)",
+    "ANTHROPIC_API_KEY=$AnthropicKey",
+    "ANTHROPIC_MODEL=$AnthropicModel",
+    "GEMINI_API_KEY=$GeminiKey",
+    "GEMINI_MODEL=$GeminiModel"
 ) | Set-Content -Path $envFile -Encoding utf8
 
 $baseUrl = "http://${LanIp}:${Port}"

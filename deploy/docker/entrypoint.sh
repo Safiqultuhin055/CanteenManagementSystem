@@ -11,6 +11,9 @@ echo "DB: ${DB_HOST}:${DB_PORT:-1433}/${DB_NAME}"
 
 python deploy/docker/wait_for_db.py
 
+echo "Applying idempotent schema patches…"
+python deploy/docker/apply_schema_patches.py || true
+
 python manage.py migrate --noinput
 python manage.py collectstatic --noinput
 python manage.py sync_menu_permissions 2>/dev/null || true

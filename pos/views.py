@@ -172,6 +172,25 @@ def api_voice_order(request):
         return JsonResponse({'success': False, 'message': 'Voice assistant failed'})
 
 
+@login_required
+@require_GET
+def api_voice_provider(request):
+    """Report which LLM integration is currently active (for the modal header)."""
+    from core.api_registry import get_active_llm
+    labels = {
+        'anthropic': 'Claude', 'gemini': 'Gemini',
+        'openai': 'OpenAI', 'none': 'নিষ্ক্রিয়',
+    }
+    cfg = get_active_llm()
+    active = cfg.is_configured
+    return JsonResponse({
+        'active': active,
+        'provider': cfg.provider if active else 'none',
+        'label': labels.get(cfg.provider, cfg.provider) if active else 'নিষ্ক্রিয়',
+        'model': cfg.api_model if active else '',
+    })
+
+
 def _tts_chunks(text, limit=180):
     """Split text into <=limit-char pieces on spaces (Google TTS caps length)."""
     words = text.split()

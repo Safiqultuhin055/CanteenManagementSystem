@@ -26,5 +26,11 @@ services:
       FORCE_SCRIPT_NAME: ${FORCE_SCRIPT_NAME:-}
       STATIC_URL: /static/
       MEDIA_URL: /media/
+      # POS voice LLM keys — normally managed in DB (admin → API integrations);
+      # these are a fallback only when the api_integrations table is empty.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-5}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-flash-lite-latest}
     volumes:
       - ../../media:/app/media

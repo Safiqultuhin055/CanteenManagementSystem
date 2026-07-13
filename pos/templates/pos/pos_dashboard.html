@@ -1124,8 +1124,26 @@
     }
     .voice-head .vh-title { font-weight: 700; font-size: 0.95rem; }
     .voice-head .vh-sub { font-size: 0.7rem; color: var(--pos-muted); }
+
+    .voice-provider-badge {
+        margin-left: auto;
+        display: inline-flex; align-items: center; gap: 0.32rem;
+        font-size: 0.7rem; font-weight: 700; letter-spacing: 0.02em;
+        padding: 0.2rem 0.55rem; border-radius: 999px;
+        background: rgba(16, 185, 129, 0.16); color: #6ee7b7;
+        border: 1px solid rgba(16, 185, 129, 0.35);
+        white-space: nowrap;
+    }
+    .voice-provider-badge .vpb-dot {
+        width: 7px; height: 7px; border-radius: 50%;
+        background: currentColor; box-shadow: 0 0 6px currentColor;
+    }
+    .voice-provider-badge.inactive {
+        background: rgba(239, 68, 68, 0.16); color: #fca5a5;
+        border-color: rgba(239, 68, 68, 0.4);
+    }
     .voice-close {
-        margin-left: auto; border: none; background: transparent; color: var(--pos-muted);
+        border: none; background: transparent; color: var(--pos-muted);
         font-size: 1.05rem; cursor: pointer; line-height: 1; padding: 4px 6px; border-radius: 8px;
     }
     .voice-close:hover { color: var(--pos-text); background: rgba(255,255,255,0.08); }
@@ -1210,6 +1228,9 @@
                 <div class="vh-title">ভয়েস অর্ডার</div>
                 <div class="vh-sub" id="voice-customer-sub">গ্রাহক</div>
             </div>
+            <span class="voice-provider-badge" id="voice-provider-badge" title="সক্রিয় API">
+                <span class="vpb-dot"></span><span id="voice-provider-label">…</span>
+            </span>
             <button type="button" class="voice-close" onclick="closeVoiceModal()" aria-label="Close">&times;</button>
         </div>
 
@@ -2424,6 +2445,26 @@ window.VOICE_ENABLED = {% if voice_enabled %}true{% else %}false{% endif %};
         processCheckout();
     };
 
+    // Show which API is active in the header badge (live from the DB).
+    function loadVoiceProvider() {
+        const badge = el('voice-provider-badge');
+        const label = el('voice-provider-label');
+        if (!badge || !label) return;
+        label.textContent = '…';
+        badge.classList.remove('inactive');
+        fetch('{% url "pos:api_voice_provider" %}', { credentials: 'same-origin' })
+            .then(r => r.json())
+            .then(d => {
+                label.textContent = d.label || 'নিষ্ক্রিয়';
+                badge.classList.toggle('inactive', !d.active);
+                badge.title = d.active ? ('সক্রিয় API: ' + d.label + ' · ' + (d.model || '')) : 'কোনো API সক্রিয় নেই';
+                if (!d.active) {
+                    appendMsg('bot', 'কোনো API সক্রিয় নেই — অ্যাডমিন থেকে একটি API সক্রিয় করুন।', 'issue');
+                }
+            })
+            .catch(() => { label.textContent = '—'; });
+    }
+
     // ---- Modal open/close ----
     window.openVoiceModal = function (manual, name) {
         const ov = el('voice-overlay');
@@ -2432,6 +2473,7 @@ window.VOICE_ENABLED = {% if voice_enabled %}true{% else %}false{% endif %};
         if (!el('active_card_id').value && !manual) return;
         const sub = el('voice-customer-sub');
         if (sub) sub.textContent = customerName;
+        loadVoiceProvider();
 
         // Fresh session each open.
         convo = [];
