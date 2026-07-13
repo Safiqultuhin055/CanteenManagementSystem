@@ -54,7 +54,15 @@ class MenuItem(models.Model):
         if not self.has_image:
             return None
         from django.urls import reverse
-        return reverse('inventory:menu_item_image', args=[self.pk])
+        url = reverse('inventory:menu_item_image', args=[self.pk])
+        # Cache-buster: token changes when the row's updated_at changes, so a
+        # re-uploaded image is fetched fresh despite the immutable Cache-Control.
+        version = getattr(self, 'updated_at', None)
+        if version:
+            import hashlib
+            token = hashlib.md5(str(version).encode(), usedforsecurity=False).hexdigest()[:12]
+            url = f'{url}?v={token}'
+        return url
 
 class Supplier(models.Model):
     supplier_name = models.CharField(max_length=200, unique=True)

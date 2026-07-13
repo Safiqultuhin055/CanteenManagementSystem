@@ -27,7 +27,11 @@ def invalidate_menu_item_image(item_id: int) -> None:
 
 def fetch_menu_item_image(item_id: int) -> MenuImagePayload | None:
     """Load image bytes from cache or SQL Server (single row, BLOB only)."""
-    key = cache_key(item_id)
+    # Version the cache key by the row's updated_at so a re-uploaded image is
+    # served fresh WITHOUT a server restart (LocMemCache is per-process, so an
+    # invalidate() from a script/other worker can't reach a running server).
+    version = image_version(item_id)
+    key = f'{cache_key(item_id)}:{version}'
     cached = cache.get(key)
     if cached:
         return MenuImagePayload(*cached)
@@ -52,6 +56,19 @@ def fetch_menu_item_image(item_id: int) -> MenuImagePayload | None:
     payload = MenuImagePayload(data, content_type, etag)
     cache.set(key, (payload.data, payload.content_type, payload.etag), CACHE_TTL)
     return payload
+
+
+def image_version(item_id: int) -> str:
+    """Cheap change-token for an item's image (updated_at ticks, no BLOB load)."""
+    with connection.cursor() as cursor:
+        cursor.execute(
+            'SELECT updated_at FROM menu_items WHERE id = %s AND is_deleted = 0',
+            [item_id],
+        )
+        row = cursor.fetchone()
+    if not row or not row[0]:
+        return '0'
+    return hashlib.md5(str(row[0]).encode(), usedforsecurity=False).hexdigest()[:12]
 
 
 def item_has_image(item_id: int) -> bool:

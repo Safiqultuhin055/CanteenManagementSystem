@@ -264,23 +264,22 @@
 
     .pos-menu-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(152px, 1fr));
-        gap: 0.55rem;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.85rem;
     }
 
-    @media (min-width: 1600px) {
-        .pos-menu-grid { grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); }
-    }
+    @media (max-width: 1250px) { .pos-menu-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    @media (max-width: 640px)  { .pos-menu-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6rem; } }
 
     .menu-item-col { min-width: 0; }
 
     .menu-card {
         background: var(--pos-surface);
         border: 1px solid var(--pos-border);
-        border-radius: 10px;
+        border-radius: 14px;
         padding: 0;
         cursor: pointer;
-        transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+        transition: transform 0.18s ease, border-color 0.18s, box-shadow 0.18s;
         height: 100%;
         display: flex;
         flex-direction: column;
@@ -289,17 +288,14 @@
         -webkit-tap-highlight-color: transparent;
         position: relative;
         overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
     }
 
     .menu-card-image {
         position: relative;
         width: 100%;
-        aspect-ratio: 4 / 3;
-        min-height: 96px;
-        max-height: 110px;
-        background:
-            radial-gradient(ellipse 80% 70% at 50% 55%, rgba(255, 255, 255, 0.06) 0%, transparent 70%),
-            linear-gradient(165deg, var(--pos-surface-2) 0%, var(--pos-surface-3) 100%);
+        aspect-ratio: 16 / 9;
+        background: linear-gradient(165deg, var(--pos-surface-2) 0%, var(--pos-surface-3) 100%);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -307,15 +303,25 @@
         flex-shrink: 0;
     }
 
+    /* Real photos fill the frame edge-to-edge. */
     .menu-card-image img {
         width: 100%;
         height: 100%;
-        object-fit: contain;
-        object-position: center bottom;
-        padding: 6px 8px 4px;
+        object-fit: cover;
+        object-position: center;
         display: block;
-        transition: transform 0.2s ease;
-        filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35));
+        transition: transform 0.35s ease;
+    }
+
+    /* Depth scrim so the body reads as one piece with the photo. */
+    .menu-card-image::before {
+        content: '';
+        position: absolute;
+        inset: auto 0 0 0;
+        height: 42%;
+        background: linear-gradient(to top, rgba(15, 22, 32, 0.55), transparent);
+        z-index: 1;
+        pointer-events: none;
     }
 
     .menu-card-placeholder {
@@ -334,9 +340,10 @@
         letter-spacing: 0.04em;
         padding: 0.15rem 0.35rem;
         border-radius: 4px;
-        background: rgba(16, 185, 129, 0.9);
+        background: rgba(16, 185, 129, 0.92);
         color: #fff;
-        z-index: 1;
+        z-index: 2;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
     }
 
     .menu-card-body {
@@ -344,9 +351,9 @@
         min-width: 0;
         display: flex;
         flex-direction: column;
-        justify-content: center;
-        padding: 0.45rem 0.5rem 0.55rem;
-        gap: 0.2rem;
+        justify-content: flex-start;
+        padding: 0.6rem 0.7rem 0.7rem;
+        gap: 0.28rem;
     }
 
     .menu-card.in-cart {
@@ -403,27 +410,27 @@
     }
 
     .menu-card:hover .menu-card-image img {
-        transform: scale(1.05) translateY(-2px);
+        transform: scale(1.07);
     }
 
     .menu-card:active { transform: scale(0.98); }
 
     .menu-card-name {
-        font-weight: 600;
-        font-size: 0.8rem;
-        line-height: 1.25;
+        font-weight: 700;
+        font-size: 1.08rem;
+        line-height: 1.2;
         margin: 0;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
+        letter-spacing: -0.01em;
+        white-space: nowrap;
         overflow: hidden;
+        text-overflow: ellipsis;
     }
     .menu-card-name-bn {
-        font-weight: 500;
-        font-size: 0.72rem;
-        line-height: 1.2;
-        margin: 1px 0 0;
-        color: var(--pos-muted);
+        font-weight: 700;
+        font-size: 0.98rem;
+        line-height: 1.25;
+        margin: 0;
+        color: #cbd5e1;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -438,7 +445,7 @@
 
     .menu-card-price {
         font-weight: 800;
-        font-size: 0.88rem;
+        font-size: 1rem;
         color: var(--pos-success);
         letter-spacing: -0.02em;
         white-space: nowrap;
@@ -1077,11 +1084,162 @@
         .pos-pill.rfid-ready .pos-pill-dot,
         .scan-pulse { animation: none !important; }
     }
+
+    /* ---------- Voice order assistant ---------- */
+    .voice-launch-btn {
+        background: linear-gradient(135deg, #7c3aed, #4f46e5);
+        color: #fff; border: none; font-weight: 600;
+    }
+    .voice-launch-btn:hover { color: #fff; filter: brightness(1.08); }
+
+    /* Glass panel docked to the right — menu stays visible & clickable behind it. */
+    .voice-overlay {
+        position: fixed; inset: 0; z-index: 1080;
+        display: none; align-items: center; justify-content: flex-end;
+        padding: 0.9rem 1.1rem;
+        background: transparent;
+        pointer-events: none;   /* clicks pass through to the menu underneath */
+    }
+    .voice-overlay.show { display: flex; }
+
+    .voice-modal {
+        pointer-events: auto;   /* but the panel itself is interactive */
+        width: min(400px, 40vw); min-width: 320px;
+        height: calc(100vh - 1.8rem); max-height: calc(100vh - 1.8rem);
+        display: flex; flex-direction: column;
+        background: rgba(15, 23, 42, 0.60);
+        backdrop-filter: blur(16px) saturate(1.25);
+        -webkit-backdrop-filter: blur(16px) saturate(1.25);
+        border: 1px solid rgba(148, 163, 184, 0.28);
+        border-radius: 18px; overflow: hidden;
+        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
+        animation: voiceIn 0.24s ease;
+    }
+    @keyframes voiceIn { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+
+    .voice-head {
+        display: flex; align-items: center; gap: 0.6rem;
+        padding: 0.75rem 1rem; border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+        background: linear-gradient(135deg, rgba(124,58,237,0.34), rgba(79,70,229,0.22));
+    }
+    .voice-head .vh-title { font-weight: 700; font-size: 0.95rem; }
+    .voice-head .vh-sub { font-size: 0.7rem; color: var(--pos-muted); }
+    .voice-close {
+        margin-left: auto; border: none; background: transparent; color: var(--pos-muted);
+        font-size: 1.05rem; cursor: pointer; line-height: 1; padding: 4px 6px; border-radius: 8px;
+    }
+    .voice-close:hover { color: var(--pos-text); background: rgba(255,255,255,0.08); }
+
+    /* Blinking mic orb */
+    .voice-mic-zone { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; padding: 1.1rem 1rem 0.6rem; }
+    .voice-orb {
+        width: 76px; height: 76px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.9rem; color: #fff; cursor: pointer;
+        background: linear-gradient(135deg, #7c3aed, #4f46e5);
+        border: none; position: relative; transition: transform 0.15s;
+    }
+    .voice-orb:active { transform: scale(0.95); }
+    .voice-orb::after {
+        content: ''; position: absolute; inset: 0; border-radius: 50%;
+        box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.6);
+    }
+    .voice-orb.listening { background: linear-gradient(135deg, #dc2626, #b91c1c); }
+    .voice-orb.listening::after { animation: micPulse 1.3s ease-out infinite; }
+    @keyframes micPulse {
+        0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.55); }
+        100% { box-shadow: 0 0 0 22px rgba(239, 68, 68, 0); }
+    }
+    .voice-orb.thinking { background: linear-gradient(135deg, #64748b, #475569); }
+    .voice-mic-hint { font-size: 0.72rem; color: var(--pos-muted); min-height: 1rem; }
+
+    /* Live transcript input */
+    .voice-input-wrap { padding: 0 1rem 0.6rem; }
+    .voice-input {
+        width: 100%; border-radius: 12px; border: 1px solid rgba(148, 163, 184, 0.3);
+        background: rgba(2, 6, 23, 0.55); color: var(--pos-text);
+        padding: 0.6rem 0.75rem; font-size: 0.9rem; resize: none; min-height: 44px;
+    }
+    .voice-input:focus { outline: none; border-color: #a78bfa; background: rgba(2, 6, 23, 0.72); }
+    .voice-input::placeholder { color: var(--pos-muted); }
+
+    /* Conversation log — fills the tall panel */
+    .voice-log {
+        flex: 1 1 auto; min-height: 0; overflow-y: auto;
+        padding: 0.5rem 1rem; display: flex; flex-direction: column; gap: 0.4rem;
+    }
+    .v-msg { max-width: 85%; padding: 0.42rem 0.68rem; border-radius: 12px; font-size: 0.85rem; line-height: 1.38; color: var(--pos-text); word-break: break-word; box-shadow: 0 2px 8px rgba(0,0,0,0.25); }
+    .v-msg.user { align-self: flex-end; background: rgba(59,130,246,0.35); border: 1px solid rgba(96,165,250,0.5); color: #eff6ff; }
+    .v-msg.bot { align-self: flex-start; background: rgba(30, 41, 59, 0.82); border: 1px solid rgba(148,163,184,0.28); color: var(--pos-text); }
+    .v-msg.issue { align-self: center; font-size: 0.74rem; color: #fca5a5; background: transparent; border: none; box-shadow: none; }
+
+    /* Order preview + confirm */
+    .voice-order-preview { padding: 0.3rem 1rem; }
+    .vop-line { display: flex; justify-content: space-between; font-size: 0.82rem; padding: 0.15rem 0; }
+    .vop-line .vop-name { color: var(--pos-text); }
+    .vop-line .vop-amt { color: var(--pos-success); font-weight: 600; }
+    .vop-total { display: flex; justify-content: space-between; font-weight: 700; border-top: 1px dashed var(--pos-border); margin-top: 0.3rem; padding-top: 0.3rem; }
+
+    .voice-foot { padding: 0.6rem 1rem 0.9rem; border-top: 1px solid var(--pos-border); display: flex; gap: 0.5rem; }
+    .voice-foot .btn { flex: 1; font-weight: 600; }
+    .voice-confirm-badge {
+        text-align: center; font-size: 0.72rem; color: #6ee7b7; padding: 0 1rem 0.3rem;
+    }
+
+    @media (max-width: 700px) {
+        .voice-overlay { justify-content: center; padding: 0.6rem; }
+        .voice-modal { width: 94vw; min-width: 0; max-width: 94vw; height: calc(100vh - 1.2rem); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .voice-orb.listening::after { animation: none !important; }
+        .voice-modal { animation: none !important; }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <input type="text" id="rfid_input" class="rfid-hidden" autofocus autocomplete="off" autocapitalize="off" spellcheck="false" tabindex="0" aria-label="RFID card scanner input">
+
+{% if voice_enabled %}
+<div class="voice-overlay" id="voice-overlay" aria-hidden="true">
+    <div class="voice-modal" role="dialog" aria-modal="true" aria-label="Voice order assistant">
+        <div class="voice-head">
+            <i class="bi bi-robot" style="font-size:1.2rem;color:#a78bfa;"></i>
+            <div>
+                <div class="vh-title">ভয়েস অর্ডার</div>
+                <div class="vh-sub" id="voice-customer-sub">গ্রাহক</div>
+            </div>
+            <button type="button" class="voice-close" onclick="closeVoiceModal()" aria-label="Close">&times;</button>
+        </div>
+
+        <div class="voice-mic-zone">
+            <button type="button" class="voice-orb" id="voice-orb" onclick="toggleListening()" aria-label="Tap to speak">
+                <i class="bi bi-mic-fill"></i>
+            </button>
+            <div class="voice-mic-hint" id="voice-mic-hint">কথা বলতে মাইকে চাপ দিন</div>
+        </div>
+
+        <div class="voice-input-wrap">
+            <textarea class="voice-input" id="voice-input" rows="1" placeholder="এখানে আপনার কথা লেখা উঠবে… (অথবা টাইপ করুন)"></textarea>
+        </div>
+
+        <div class="voice-log" id="voice-log"></div>
+
+        <div class="voice-order-preview" id="voice-order-preview"></div>
+        <div class="voice-confirm-badge" id="voice-confirm-badge" style="display:none;"></div>
+
+        <div class="voice-foot">
+            <button type="button" class="btn btn-outline-light border-secondary" id="voice-send-btn" onclick="sendVoiceText()">
+                <i class="bi bi-send me-1"></i> পাঠান
+            </button>
+            <button type="button" class="btn btn-success" id="voice-confirm-btn" onclick="confirmVoiceOrder()" disabled>
+                <i class="bi bi-check2-circle me-1"></i> কনফার্ম
+            </button>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <div class="pos-shell">
     <header class="pos-topbar">
@@ -1102,6 +1260,11 @@
                 </span>
             </div>
             <span class="pos-clock d-none d-md-inline" id="pos-clock"></span>
+            {% if voice_enabled %}
+            <button type="button" class="btn btn-sm voice-launch-btn" id="voice-launch-btn" onclick="openVoiceModal(true)" title="Voice order (Bangla)">
+                <i class="bi bi-mic-fill me-1"></i> Voice
+            </button>
+            {% endif %}
             <a href="{% url 'core:dashboard' %}" class="btn btn-sm btn-outline-light border-secondary">
                 <i class="bi bi-grid me-1"></i> Dashboard
             </a>
@@ -1542,6 +1705,9 @@ function scanCard(cardNumber) {
             showToast('Card accepted: ' + data.employee_name);
             updateCheckoutBtn();
             updatePosSteps();
+            if (typeof openVoiceModal === 'function' && window.VOICE_ENABLED) {
+                openVoiceModal(false, data.employee_name);
+            }
         } else {
             showToast(data.message || 'Invalid card', 'error');
         }
@@ -1845,23 +2011,491 @@ function processCheckout() {
                     updateMenuCardStockBadge(card);
                 }
             });
-            if (data.receipt) {
-                printReceipt(data.receipt, { customerOnly: true });
-            }
             showToast('Sale complete · Token #' + data.token_number);
+            const wasVoice = window._voiceCheckout;
+            window._voiceCheckout = false;
+            const doPrint = () => {
+                if (data.receipt) printReceipt(data.receipt, { customerOnly: true });
+            };
+            if (wasVoice && typeof window.posSpeak === 'function') {
+                // Announce token in Bangla FIRST, then print — the print window
+                // steals focus, so start the audio before opening it.
+                window.posSpeak('আপনার অর্ডার কনফার্ম হয়েছে। আপনার টোকেন নম্বর ' + data.token_number + '।');
+                setTimeout(doPrint, 1400);
+            } else {
+                doPrint();
+            }
             closeSaleOverlay();
         } else {
+            window._voiceCheckout = false;
             showToast(data.message || 'Checkout failed', 'error');
             updateCheckoutBtn();
         }
     })
     .catch((err) => {
         isProcessing = false;
+        window._voiceCheckout = false;
         btn.innerHTML = '<span><i class="bi bi-lightning-charge-fill me-1"></i> Complete Sale</span><span class="checkout-sub" id="checkout-sub"></span>';
         updateCheckoutBtn();
         showToast(err.message || 'Network error', 'error');
         updateCheckoutBtn();
     });
 }
+
+/* =====================================================================
+   Voice order assistant (Bangla)
+   STT + TTS: browser Web Speech API (bn-BD). Brain: Claude via backend.
+   ===================================================================== */
+window.VOICE_ENABLED = {% if voice_enabled %}true{% else %}false{% endif %};
+
+(function initVoiceAssistant() {
+    if (!window.VOICE_ENABLED) return;
+
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const speechSupported = !!SR;
+
+    let recog = null;
+    let listening = false;
+    let voiceBusy = false;
+    let convo = [];                 // [{role, content}]
+    let pendingOrder = [];          // last assistant items [{id,name,qty,price,line_total}]
+    let readyToConfirm = false;
+    let customerName = 'গ্রাহক';
+    let finalTranscript = '';
+
+    let sessionActive = false;      // modal open + conversation running
+    let manualStop = false;         // we stopped recog on purpose (don't auto-restart)
+    let idleTimer = null;
+    let nudgeCount = 0;
+    let ttsAudio = null;            // current server-TTS <audio> element
+    const IDLE_MS = 25000;          // silence → nudge to confirm
+
+    const el = (id) => document.getElementById(id);
+
+    function setOrbState(state) {
+        const orb = el('voice-orb');
+        if (!orb) return;
+        orb.classList.remove('listening', 'thinking');
+        if (state) orb.classList.add(state);
+    }
+
+    function setHint(text) {
+        const h = el('voice-mic-hint');
+        if (h) h.textContent = text;
+    }
+
+    function appendMsg(role, text, cls) {
+        const log = el('voice-log');
+        if (!log || !text) return;
+        const div = document.createElement('div');
+        div.className = 'v-msg ' + (cls || (role === 'user' ? 'user' : 'bot'));
+        div.textContent = text;
+        log.appendChild(div);
+        log.scrollTop = log.scrollHeight;
+    }
+
+    // ---- Idle-to-confirm timer ----
+    function clearIdle() {
+        if (idleTimer) { clearTimeout(idleTimer); idleTimer = null; }
+    }
+    function armIdle() {
+        clearIdle();
+        if (!sessionActive) return;
+        idleTimer = setTimeout(onIdle, IDLE_MS);
+    }
+    function onIdle() {
+        idleTimer = null;
+        if (!sessionActive || voiceBusy) { armIdle(); return; }
+        nudgeCount += 1;
+        stopRecog();
+        // After 2 nudges with no response, politely close the modal.
+        if (nudgeCount > 2) {
+            const bye = pendingOrder.length
+                ? 'ঠিক আছে, প্রয়োজনে আবার বলবেন।'
+                : 'ধন্যবাদ, পরে আবার বলবেন।';
+            appendMsg('bot', bye);
+            speak(bye, () => closeVoiceModal());
+            return;
+        }
+        const nudge = pendingOrder.length
+            ? 'আর কিছু লাগবে? না হলে বলুন — কনফার্ম অর্ডার।'
+            : 'কী অর্ডার করবেন, বলুন।';
+        appendMsg('bot', nudge);
+        // Speak the nudge, then resume listening and re-arm the idle timer.
+        speak(nudge, () => { beginListen(); armIdle(); });
+    }
+
+    // ---- Text to speech (bn-BD) ----
+    function pickBnVoice() {
+        if (!('speechSynthesis' in window)) return null;
+        const voices = window.speechSynthesis.getVoices() || [];
+        const bn = voices.filter(v => /^bn/i.test(v.lang) || /bangla|bengali/i.test(v.name));
+        if (!bn.length) return null;
+        // Prefer a female voice for the sales/customer-care persona.
+        const female = bn.find(v => /female|women|মিতা|kajol|priya|ananya/i.test(v.name));
+        return female || bn.find(v => /^bn-BD/i.test(v.lang)) || bn[0];
+    }
+
+    // Some engines only populate voices after this event; unlock on first gesture.
+    function unlockTts() {
+        if (!('speechSynthesis' in window)) return;
+        try { window.speechSynthesis.resume(); } catch (e) {}
+        try { window.speechSynthesis.getVoices(); } catch (e) {}
+    }
+
+    function stopAudio() {
+        if (ttsAudio) {
+            try { ttsAudio.pause(); ttsAudio.src = ''; } catch (e) {}
+            ttsAudio = null;
+        }
+        if ('speechSynthesis' in window) { try { window.speechSynthesis.cancel(); } catch (e) {} }
+    }
+
+    // Browser Web Speech fallback (only used if server audio fails).
+    function browserSpeak(text, fire) {
+        if (!('speechSynthesis' in window)) { fire(); return; }
+        try {
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.resume();
+            const u = new SpeechSynthesisUtterance(text);
+            u.lang = 'bn-BD'; u.rate = 1.12;
+            const v = pickBnVoice();
+            if (v) u.voice = v;
+            u.onend = fire; u.onerror = fire;
+            window.speechSynthesis.speak(u);
+            setTimeout(fire, Math.min(12000, 2200 + text.length * 95));
+        } catch (e) { fire(); }
+    }
+
+    // Speaks `text`, calls onDone when finished. Caller must render the text
+    // FIRST (appendMsg) so the bubble shows before the voice starts.
+    // Primary path: server Bangla TTS (MP3) — works without any OS voice.
+    function speak(text, onDone) {
+        const done = typeof onDone === 'function' ? onDone : function () {};
+        if (!text) { setTimeout(done, 120); return; }
+        let called = false;
+        const fire = () => { if (called) return; called = true; done(); };
+        stopAudio();
+        // Give the text bubble one paint frame, then start audio.
+        requestAnimationFrame(() => {
+            try {
+                const audio = new Audio('{% url "pos:api_tts" %}?text=' + encodeURIComponent(text));
+                ttsAudio = audio;
+                audio.playbackRate = 1.22;   // snappier, more natural pacing
+                audio.preservesPitch = true;
+                audio.mozPreservesPitch = true;
+                audio.webkitPreservesPitch = true;
+                audio.onended = fire;
+                audio.onerror = () => browserSpeak(text, fire);   // fall back to OS synth
+                const p = audio.play();
+                if (p && p.catch) p.catch(() => browserSpeak(text, fire));
+                // Safety net in case neither event fires (scaled to faster rate).
+                setTimeout(fire, Math.min(13000, 2600 + text.length * 90));
+            } catch (e) {
+                browserSpeak(text, fire);
+            }
+        });
+    }
+
+    // ---- Speech recognition (continuous, auto-loop) ----
+    function buildRecognizer() {
+        if (!speechSupported) return null;
+        const r = new SR();
+        r.lang = 'bn-BD';
+        r.continuous = true;
+        r.interimResults = true;
+        r.maxAlternatives = 1;
+
+        r.onresult = (event) => {
+            let interim = '';
+            let finalText = '';
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                const t = event.results[i][0].transcript;
+                if (event.results[i].isFinal) finalText += t;
+                else interim += t;
+            }
+            const box = el('voice-input');
+            if (box) box.value = (finalText || interim).trim();
+            armIdle();                       // user is talking → reset idle countdown
+            if (finalText.trim()) {
+                // Complete utterance captured → stop mic (avoid hearing TTS) and send.
+                stopRecog();
+                setHint('পাঠানো হচ্ছে…');
+                sendVoiceText();
+            }
+        };
+        r.onerror = (e) => {
+            if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+                sessionActive = false;
+                setHint('মাইক্রোফোন অনুমতি দিন — তারপর আবার খুলুন');
+            }
+            // 'no-speech'/'aborted' handled by onend auto-restart.
+        };
+        r.onend = () => {
+            listening = false;
+            if (!voiceBusy) setOrbState(null);
+            if (manualStop) { manualStop = false; return; }
+            // Unexpected end while session live → resume listening.
+            if (sessionActive && !voiceBusy) setTimeout(beginListen, 300);
+        };
+        return r;
+    }
+
+    function beginListen() {
+        if (!speechSupported || !sessionActive || voiceBusy || listening) return;
+        try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {}
+        if (!recog) recog = buildRecognizer();
+        if (!recog) return;
+        const box = el('voice-input');
+        if (box) box.value = '';
+        try {
+            recog.start();
+            listening = true;
+            setOrbState('listening');
+            setHint('শুনছি… বলুন');
+        } catch (e) {
+            // start() throws if already running — treat as listening.
+            listening = true;
+        }
+    }
+
+    function stopRecog() {
+        clearIdle();
+        if (recog && listening) {
+            manualStop = true;
+            try { recog.stop(); } catch (e) {}
+        }
+        listening = false;
+        setOrbState(null);
+    }
+
+    // Orb tap: pause / resume the mic mid-conversation.
+    window.toggleListening = function () {
+        unlockTts();   // this tap is a user gesture — unlock speech output
+        if (!speechSupported) {
+            setHint('এই ব্রাউজারে ভয়েস নেই — টাইপ করে পাঠান');
+            el('voice-input')?.focus();
+            return;
+        }
+        if (voiceBusy) return;
+        if (listening) { stopRecog(); setHint('থামানো হয়েছে — চালু করতে চাপ দিন'); }
+        else { beginListen(); armIdle(); }
+    };
+
+    // ---- Order preview ----
+    function renderPreview() {
+        const wrap = el('voice-order-preview');
+        if (!wrap) return;
+        if (!pendingOrder.length) { wrap.innerHTML = ''; return; }
+        let total = 0;
+        let html = '';
+        pendingOrder.forEach(it => {
+            total += it.line_total;
+            const nm = it.name_bn ? (it.name + ' · ' + it.name_bn) : it.name;
+            html += `<div class="vop-line"><span class="vop-name">${escapeHtml(nm)} × ${it.qty}</span><span class="vop-amt">${formatMoney(it.line_total)}</span></div>`;
+        });
+        html += `<div class="vop-total"><span>মোট</span><span>${formatMoney(total)}</span></div>`;
+        wrap.innerHTML = html;
+    }
+
+    function updateConfirmUi() {
+        const btn = el('voice-confirm-btn');
+        const badge = el('voice-confirm-badge');
+        const canConfirm = pendingOrder.length > 0;
+        if (btn) btn.disabled = !canConfirm;
+        if (badge) {
+            if (readyToConfirm && canConfirm) {
+                badge.style.display = 'block';
+                badge.textContent = '✓ গ্রাহক সম্মত — কনফার্ম করুন';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+    }
+
+    // ---- Talk to Claude backend ----
+    window.sendVoiceText = function () {
+        unlockTts();
+        const box = el('voice-input');
+        const text = (box ? box.value : '').trim();
+        if (!text || voiceBusy) return;
+        nudgeCount = 0;       // customer responded → reset the silence counter
+        stopRecog();          // pause mic + idle while we talk to the model
+        appendMsg('user', text);
+        convo.push({ role: 'user', content: text });
+        if (box) box.value = '';
+        runTurn();
+    };
+
+    function runTurn() {
+        voiceBusy = true;
+        setOrbState('thinking');
+        setHint('ভাবছি…');
+        const sendBtn = el('voice-send-btn');
+        if (sendBtn) sendBtn.disabled = true;
+
+        fetch('{% url "pos:api_voice_order" %}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+            credentials: 'same-origin',
+            body: JSON.stringify({ messages: convo, customer_name: customerName })
+        })
+        .then(async (r) => {
+            let data;
+            try { data = await r.json(); } catch (e) {
+                throw new Error(r.status === 403 ? 'সেশন শেষ — আবার লগইন করুন' : 'সার্ভার সমস্যা');
+            }
+            return data;
+        })
+        .then(data => {
+            voiceBusy = false;
+            setOrbState(null);
+            const sb = el('voice-send-btn');
+            if (sb) sb.disabled = false;
+
+            if (!data.success) {
+                appendMsg('bot', data.message || 'সমস্যা হয়েছে', 'issue');
+                setHint('আবার চেষ্টা করুন');
+                if (sessionActive) { beginListen(); armIdle(); }
+                return;
+            }
+            const reply = data.reply || '';
+            appendMsg('bot', reply);
+            convo.push({ role: 'assistant', content: reply });
+            (data.issues || []).forEach(msg => appendMsg('bot', '⚠ ' + msg, 'issue'));
+
+            pendingOrder = data.items || [];
+            readyToConfirm = !!data.ready_to_confirm;
+            renderPreview();
+            updateConfirmUi();
+
+            if (readyToConfirm && pendingOrder.length) {
+                // Customer agreed ("কনফার্ম অর্ডার") → speak, then auto-confirm + print.
+                sessionActive = false;
+                clearIdle();
+                stopRecog();
+                speak(reply, () => confirmVoiceOrder());
+                setHint('অর্ডার কনফার্ম হচ্ছে…');
+            } else {
+                // Keep the conversation going: speak, then listen for the next item.
+                speak(reply, () => { beginListen(); armIdle(); });
+                setHint('উত্তর শুনছি…');
+            }
+        })
+        .catch(err => {
+            voiceBusy = false;
+            setOrbState(null);
+            const sb = el('voice-send-btn');
+            if (sb) sb.disabled = false;
+            appendMsg('bot', err.message || 'নেটওয়ার্ক সমস্যা', 'issue');
+            if (sessionActive) { beginListen(); armIdle(); }
+        });
+    }
+
+    // ---- Confirm: push voice order into the real cart + checkout ----
+    window.confirmVoiceOrder = function () {
+        if (!pendingOrder.length) return;
+        const hasCustomer = el('active_card_id').value !== '';
+        if (!hasCustomer) {
+            showToast('আগে কার্ড স্ক্যান করুন', 'error');
+            const msg = 'অর্ডার কনফার্ম করতে আপনার কার্ড যুক্ত করুন।';
+            appendMsg('bot', msg);
+            // Prompt by voice, then keep listening (session may already be closing).
+            sessionActive = true;
+            speak(msg, () => { beginListen(); armIdle(); });
+            return;
+        }
+
+        cart = {};
+        pendingOrder.forEach(it => {
+            const card = getMenuCard(it.id);
+            cart[it.id] = {
+                name: it.name,
+                price: it.price,
+                qty: it.qty,
+                image: card?.dataset.image || '',
+                emoji: card?.dataset.emoji || '🍽️',
+                nameBn: it.name_bn || card?.dataset.nameBn || '',
+            };
+        });
+        renderCart();
+        window._voiceCheckout = true;   // tell processCheckout to announce the token
+        closeVoiceModal();
+        processCheckout();
+    };
+
+    // ---- Modal open/close ----
+    window.openVoiceModal = function (manual, name) {
+        const ov = el('voice-overlay');
+        if (!ov) return;
+        if (name) customerName = name;
+        if (!el('active_card_id').value && !manual) return;
+        const sub = el('voice-customer-sub');
+        if (sub) sub.textContent = customerName;
+
+        // Fresh session each open.
+        convo = [];
+        pendingOrder = [];
+        readyToConfirm = false;
+        nudgeCount = 0;
+        voiceBusy = false;
+        const log = el('voice-log');
+        if (log) log.innerHTML = '';
+        renderPreview();
+        updateConfirmUi();
+        const box = el('voice-input');
+        if (box) box.value = '';
+
+        ov.classList.add('show');
+        ov.setAttribute('aria-hidden', 'false');
+        sessionActive = true;
+        unlockTts();
+
+        const hasCard = el('active_card_id').value !== '';
+        const greet = hasCard
+            ? 'স্বাগতম! বলুন, কী অর্ডার করবেন?'
+            : 'স্বাগতম! অর্ডার করতে আগে আপনার কার্ড যুক্ত করুন।';
+        appendMsg('bot', greet);
+        convo.push({ role: 'assistant', content: greet });
+        setHint(speechSupported ? 'শুনছি… বলুন' : 'এই ব্রাউজারে ভয়েস নেই — টাইপ করুন');
+        // Speak greeting, then auto-start the mic (continuous listening).
+        speak(greet, () => { beginListen(); armIdle(); });
+    };
+
+    window.closeVoiceModal = function () {
+        const ov = el('voice-overlay');
+        if (!ov) return;
+        sessionActive = false;
+        clearIdle();
+        stopRecog();
+        stopAudio();
+        ov.classList.remove('show');
+        ov.setAttribute('aria-hidden', 'true');
+        focusRfidInput();
+    };
+
+    // Enter-to-send in the textarea; Esc closes.
+    document.addEventListener('DOMContentLoaded', () => {
+        const box = el('voice-input');
+        if (box) {
+            box.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendVoiceText(); }
+            });
+        }
+    });
+    document.addEventListener('keydown', (e) => {
+        const ov = el('voice-overlay');
+        if (e.key === 'Escape' && ov && ov.classList.contains('show')) closeVoiceModal();
+    });
+
+    // Preload TTS voices (some browsers populate async).
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.onvoiceschanged = () => {};
+        try { window.speechSynthesis.getVoices(); } catch (e) {}
+    }
+
+    // Expose speak() so checkout can announce the token number in Bangla.
+    window.posSpeak = speak;
+})();
 </script>
 {% endblock %}

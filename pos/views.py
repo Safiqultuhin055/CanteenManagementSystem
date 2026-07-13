@@ -1,11 +1,12 @@
 import json
 import logging
 
+import requests
 from django.contrib.auth.decorators import login_required
 from django.db.models import BooleanField, Case, Value, When
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 from balance.models import EmployeeBalance
 from employee.models import EmployeeCard
@@ -14,6 +15,7 @@ from inventory.models import FoodCategory, MenuItem
 from .services.checkout import CheckoutError, process_checkout
 from .services.menu_stock import build_pos_menu_stock
 from .services.receipt_settings import get_receipt_settings
+from .services.voice_agent import VoiceAgentError, run_voice_turn
 
 logger = logging.getLogger(__name__)
 
@@ -68,11 +70,13 @@ def pos_dashboard(request):
         .order_by('category__category_name', 'item_name')
     )
     menu_stock = build_pos_menu_stock(menu_items)
+    from django.conf import settings
     return render(request, 'pos/pos_dashboard.html', {
         'categories': categories,
         'menu_items': menu_items,
         'menu_stock': menu_stock,
         'receipt_defaults': get_receipt_settings(),
+        'voice_enabled': bool(getattr(settings, 'ANTHROPIC_API_KEY', '')),
     })
 
 
@@ -143,3 +147,79 @@ def api_checkout(request):
     except Exception as exc:
         logger.exception('Checkout failed')
         return JsonResponse({'success': False, 'message': f'Checkout failed: {exc}'})
+
+
+@login_required
+@require_POST
+def api_voice_order(request):
+    """One turn of the Bangla voice ordering assistant (Claude)."""
+    try:
+        data = json.loads(request.body)
+        history = data.get('messages') or []
+        if not isinstance(history, list):
+            return JsonResponse({'success': False, 'message': 'Invalid conversation'})
+        # Keep the transcript bounded so a long session can't balloon the prompt.
+        history = history[-20:]
+        customer_name = data.get('customer_name') or None
+        result = run_voice_turn(history=history, customer_name=customer_name)
+        return JsonResponse(result)
+    except VoiceAgentError as exc:
+        return JsonResponse({'success': False, 'message': str(exc)})
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid request data'})
+    except Exception as exc:
+        logger.exception('Voice order failed')
+        return JsonResponse({'success': False, 'message': 'Voice assistant failed'})
+
+
+def _tts_chunks(text, limit=180):
+    """Split text into <=limit-char pieces on spaces (Google TTS caps length)."""
+    words = text.split()
+    chunks, cur = [], ''
+    for w in words:
+        if len(cur) + len(w) + 1 > limit and cur:
+            chunks.append(cur)
+            cur = w
+        else:
+            cur = (cur + ' ' + w).strip()
+    if cur:
+        chunks.append(cur)
+    return chunks[:6]  # cap total work per reply
+
+
+@login_required
+@require_GET
+def api_tts(request):
+    """Bangla text-to-speech proxy — returns MP3 audio (no OS voice needed).
+
+    Uses Google Translate's public TTS endpoint (Bengali). The browser plays
+    the audio, so speech works even when Windows has no Bangla voice installed.
+    """
+    text = (request.GET.get('text') or '').strip()
+    if not text:
+        return HttpResponse(status=400)
+    text = text[:600]
+
+    audio = bytearray()
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+        'Referer': 'https://translate.google.com/',
+    }
+    try:
+        for chunk in _tts_chunks(text):
+            r = requests.get(
+                'https://translate.google.com/translate_tts',
+                params={'ie': 'UTF-8', 'q': chunk, 'tl': 'bn', 'client': 'tw-ob'},
+                headers=headers, timeout=20,
+            )
+            if r.status_code != 200 or 'audio' not in r.headers.get('Content-Type', ''):
+                logger.warning('TTS upstream %s for chunk', r.status_code)
+                return HttpResponse(status=502)
+            audio.extend(r.content)
+    except requests.RequestException:
+        logger.exception('TTS proxy failed')
+        return HttpResponse(status=502)
+
+    resp = HttpResponse(bytes(audio), content_type='audio/mpeg')
+    resp['Cache-Control'] = 'public, max-age=86400'
+    return resp
