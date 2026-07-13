@@ -166,9 +166,12 @@ def run_voice_turn(*, history, customer_name=None, stock_date=None):
     history: list of {'role': 'user'|'assistant', 'content': str}
     Returns a dict the view can hand straight back to the browser.
     """
-    api_key = getattr(settings, 'ANTHROPIC_API_KEY', '')
-    if not api_key:
-        raise VoiceAgentError('Voice assistant not configured (missing ANTHROPIC_API_KEY)')
+    from core.api_registry import get_integration
+    cfg = get_integration('anthropic')
+    if not cfg.is_configured:
+        raise VoiceAgentError('Voice assistant not configured — add an Anthropic API key')
+    api_key = cfg.api_key
+    model = cfg.api_model or getattr(settings, 'ANTHROPIC_MODEL', 'claude-sonnet-5')
 
     stock_date = stock_date or get_business_date()
     menu = build_menu_snapshot(stock_date)
@@ -189,7 +192,7 @@ def run_voice_turn(*, history, customer_name=None, stock_date=None):
         raise VoiceAgentError('No conversation input')
 
     payload = {
-        'model': getattr(settings, 'ANTHROPIC_MODEL', 'claude-sonnet-5'),
+        'model': model,
         'max_tokens': _MAX_TOKENS,
         'system': system,
         'messages': messages,
@@ -202,8 +205,9 @@ def run_voice_turn(*, history, customer_name=None, stock_date=None):
         'content-type': 'application/json',
     }
 
+    endpoint = cfg.base_url or _API_URL
     try:
-        resp = requests.post(_API_URL, headers=headers, json=payload, timeout=_TIMEOUT)
+        resp = requests.post(endpoint, headers=headers, json=payload, timeout=_TIMEOUT)
     except requests.RequestException as exc:
         logger.exception('Claude request failed')
         raise VoiceAgentError('Voice assistant unreachable') from exc

@@ -91,7 +91,7 @@ from balance.models import (
     EmployeeBalance, MonthlyAllowance,
 )
 from pos.models import GuestCard, Order, OrderDetail, Payment
-from core.models import AuditLog, SystemSetting
+from core.models import ApiIntegration, AuditLog, SystemSetting
 
 
 _COMMON_EXCLUDE = ('is_deleted', 'created_at', 'updated_at', 'created_by', 'updated_by')
@@ -357,3 +357,19 @@ class AuditLogAdminForm(CanteenAdminModelForm):
         model = AuditLog
         fields = '__all__'
         widgets = _widgets_for_model(AuditLog)
+
+
+class ApiIntegrationAdminForm(CanteenAdminModelForm):
+    class Meta:
+        model = ApiIntegration
+        fields = '__all__'
+        exclude = _COMMON_EXCLUDE
+        widgets = _widgets_for_model(ApiIntegration, extra={
+            'provider': forms.Select(attrs=FORM_SELECT, choices=ApiIntegration.PROVIDER_CHOICES),
+            'api_key': forms.PasswordInput(attrs={**FORM_CONTROL, 'autocomplete': 'new-password'},
+                                           render_value=True),
+        })
+        help_texts = {
+            'is_default': 'Preferred row when a provider has more than one key.',
+            'extra_config': 'Optional JSON for extra parameters.',
+        }
