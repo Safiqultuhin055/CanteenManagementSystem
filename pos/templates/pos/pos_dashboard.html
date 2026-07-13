@@ -418,6 +418,16 @@
         -webkit-box-orient: vertical;
         overflow: hidden;
     }
+    .menu-card-name-bn {
+        font-weight: 500;
+        font-size: 0.72rem;
+        line-height: 1.2;
+        margin: 1px 0 0;
+        color: var(--pos-muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
 
     .menu-card-meta {
         display: flex;
@@ -515,24 +525,26 @@
 
     .pos-steps {
         display: flex;
-        gap: 0.35rem;
-        margin-bottom: 0.75rem;
-        padding: 0.25rem;
+        gap: 0.3rem;
+        margin-bottom: 0.5rem;
+        padding: 0.2rem;
         background: var(--pos-bg);
-        border-radius: 10px;
+        border-radius: 9px;
         border: 1px solid var(--pos-border);
     }
+
+    .pos-cart-zone.cart-has-items .pos-steps { margin-bottom: 0.4rem; }
 
     .pos-step {
         flex: 1;
         text-align: center;
-        font-size: 0.68rem;
+        font-size: 0.66rem;
         font-weight: 600;
-        padding: 0.4rem 0.25rem;
+        padding: 0.28rem 0.25rem;
         border-radius: 7px;
         color: var(--pos-muted);
         transition: all 0.2s;
-        line-height: 1.2;
+        line-height: 1.15;
     }
 
     .pos-step.done { color: #6ee7b7; background: rgba(16, 185, 129, 0.12); }
@@ -563,12 +575,12 @@
 
     .pos-cart-header {
         flex-shrink: 0;
-        padding: 0.75rem 1rem;
+        padding: 0.6rem 0.9rem;
         border-bottom: 1px solid var(--pos-border);
     }
 
     .pos-cart-zone.cart-has-items .pos-cart-header {
-        padding: 0.5rem 1rem;
+        padding: 0.45rem 0.9rem;
     }
 
     .pos-cart-zone.cart-has-items .pos-cart-hint-long {
@@ -578,7 +590,7 @@
     .scan-pulse {
         border: 2px dashed rgba(59, 130, 246, 0.4);
         border-radius: var(--pos-radius);
-        padding: 1.25rem;
+        padding: 0.9rem 1rem;
         text-align: center;
         background: rgba(59, 130, 246, 0.06);
         animation: pulse-border 2s ease-in-out infinite;
@@ -701,36 +713,85 @@
     #cart-lines {
         display: flex;
         flex-direction: column;
-        gap: 0.5rem;
+        gap: 0.3rem;
     }
 
     .cart-line {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) auto auto;
-        gap: 0.5rem;
+        grid-template-columns: auto minmax(0, 1fr) auto auto;
+        gap: 0.45rem;
         align-items: center;
-        padding: 0.7rem 0.8rem;
+        padding: 0.3rem 0.5rem;
         background: var(--pos-surface-2);
         border-radius: var(--pos-radius-sm);
         border: 1px solid var(--pos-border);
         flex-shrink: 0;
-        transition: border-color 0.15s;
+        transition: border-color 0.15s, transform 0.15s;
+        animation: cartLineIn 0.22s ease;
     }
+
+    @keyframes cartLineIn {
+        from { opacity: 0; transform: translateY(-4px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .cart-line-thumb {
+        width: 30px;
+        height: 30px;
+        border-radius: 7px;
+        overflow: hidden;
+        flex-shrink: 0;
+        background: linear-gradient(165deg, var(--pos-surface-2), var(--pos-surface-3));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--pos-border);
+    }
+
+    .cart-line-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .cart-line-emoji { font-size: 1.15rem; opacity: 0.8; }
+
+    .cart-line-info { min-width: 0; display: flex; flex-direction: column; gap: 0; line-height: 1.15; }
+    .cart-line-info small { font-size: 0.64rem; }
+    .cart-line-bn {
+        font-size: 0.64rem;
+        color: var(--pos-muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .line-end { display: flex; flex-direction: column; align-items: flex-end; gap: 0.2rem; }
+
+    .line-remove {
+        border: none;
+        background: transparent;
+        color: var(--pos-muted);
+        font-size: 0.72rem;
+        cursor: pointer;
+        padding: 2px 4px;
+        border-radius: 6px;
+        line-height: 1;
+        opacity: 0.55;
+        transition: all 0.15s;
+    }
+
+    .line-remove:hover { color: var(--pos-danger); background: rgba(239,68,68,0.12); opacity: 1; }
 
     .cart-line:hover { border-color: rgba(59, 130, 246, 0.35); }
 
     .cart-line .line-total {
         font-weight: 700;
-        font-size: 0.9rem;
+        font-size: 0.85rem;
         color: var(--pos-success);
-        min-width: 4.5rem;
+        min-width: 3.8rem;
         text-align: right;
     }
 
     .cart-line .item-name {
         font-weight: 600;
-        font-size: 0.88rem;
-        line-height: 1.25;
+        font-size: 0.8rem;
+        line-height: 1.2;
         word-break: break-word;
     }
 
@@ -744,14 +805,14 @@
     }
 
     .qty-control button {
-        width: 32px;
-        height: 32px;
+        width: 25px;
+        height: 25px;
         border: none;
         border-radius: 6px;
         background: var(--pos-surface);
         color: var(--pos-text);
         font-weight: 700;
-        font-size: 1.1rem;
+        font-size: 0.95rem;
         cursor: pointer;
     }
 
@@ -759,7 +820,7 @@
 
     .pos-cart-footer {
         flex-shrink: 0;
-        padding: 1rem 1.15rem 1.25rem;
+        padding: 0.6rem 0.9rem 0.7rem;
         border-top: 1px solid var(--pos-border);
         background: var(--pos-surface-2);
     }
@@ -767,27 +828,36 @@
     .total-row {
         display: flex;
         justify-content: space-between;
-        margin-bottom: 0.35rem;
-        font-size: 0.9rem;
+        margin-bottom: 0.2rem;
+        font-size: 0.82rem;
         color: var(--pos-muted);
     }
 
     .total-row.grand {
-        font-size: 1.35rem;
+        font-size: 1.15rem;
         font-weight: 700;
         color: var(--pos-text);
-        margin: 0.75rem 0 1rem;
-        padding-top: 0.75rem;
-        border-top: 1px dashed var(--pos-border);
+        margin: 0 0 0.6rem;
+        padding-top: 0;
+        border-top: none;
     }
+
+    .cart-total-meta {
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: var(--pos-muted);
+        display: inline-flex;
+        align-items: center;
+    }
+    .cart-total-meta.d-none { display: none !important; }
 
     .btn-checkout {
         width: 100%;
-        padding: 1rem 1.15rem;
+        padding: 0.7rem 1rem;
         border: none;
         border-radius: var(--pos-radius-sm);
         font-weight: 700;
-        font-size: 1.05rem;
+        font-size: 1rem;
         background: linear-gradient(135deg, #3b82f6 0%, #4f46e5 50%, #2563eb 100%);
         color: #fff;
         cursor: pointer;
@@ -926,9 +996,86 @@
         border-radius: 10px;
     }
 
+    /* Search clear button */
+    .pos-search { padding-right: 2rem; }
+    .pos-search-clear {
+        position: absolute;
+        right: 0.35rem;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 22px;
+        height: 22px;
+        border: none;
+        border-radius: 6px;
+        background: var(--pos-surface-3);
+        color: var(--pos-muted);
+        font-size: 0.6rem;
+        cursor: pointer;
+        display: none;
+        align-items: center;
+        justify-content: center;
+    }
+    .pos-search-clear.show { display: inline-flex; }
+    .pos-search-clear:hover { color: var(--pos-text); background: var(--pos-danger); }
+
+    /* Category chip counts */
+    .pos-cat-btn { display: inline-flex; align-items: center; gap: 0.3rem; }
+    .cat-count {
+        font-size: 0.6rem;
+        font-weight: 700;
+        min-width: 1.05rem;
+        padding: 0 0.2rem;
+        border-radius: 999px;
+        background: rgba(148, 163, 184, 0.18);
+        color: inherit;
+        opacity: 0.85;
+        text-align: center;
+    }
+    .pos-cat-btn.active .cat-count { background: rgba(255, 255, 255, 0.28); }
+
+    /* Expired stock — distinct from plain sold-out */
+    .menu-card-stock[data-level="expired"] {
+        color: #fca5a5;
+        background: rgba(239, 68, 68, 0.2);
+        border: 1px solid rgba(239, 68, 68, 0.35);
+    }
+    .menu-card.expired .menu-card-image::after {
+        content: 'Expired';
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.72rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #fff;
+        background: repeating-linear-gradient(
+            135deg,
+            rgba(153, 27, 27, 0.72),
+            rgba(153, 27, 27, 0.72) 10px,
+            rgba(120, 20, 20, 0.72) 10px,
+            rgba(120, 20, 20, 0.72) 20px
+        );
+    }
+
+    /* Low-stock pulse to draw the eye */
+    .menu-card-stock[data-level="low"] { animation: lowPulse 1.6s ease-in-out infinite; }
+    @keyframes lowPulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+        50% { box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.22); }
+    }
+
     @media (max-width: 992px) {
         .pos-menu-zone { border-right: none; border-bottom: 1px solid var(--pos-border); max-height: 48vh; }
         .pos-cart-zone { max-height: 52vh; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .menu-card-stock[data-level="low"],
+        .pos-pill.rfid-ready .pos-pill-dot,
+        .scan-pulse { animation: none !important; }
     }
 </style>
 {% endblock %}
@@ -970,14 +1117,15 @@
                 </div>
                 <div class="pos-search-wrap">
                     <i class="bi bi-search"></i>
-                    <input type="text" class="pos-search" id="menu-search" placeholder="Search…" autocomplete="off">
+                    <input type="text" class="pos-search" id="menu-search" placeholder="Search…  ( / )" autocomplete="off">
+                    <button type="button" class="pos-search-clear" id="menu-search-clear" title="Clear (Esc)" aria-label="Clear search"><i class="bi bi-x-lg"></i></button>
                 </div>
             </div>
 
             <div class="pos-categories" id="category-filters">
-                <button type="button" class="pos-cat-btn active" data-cat="all">All</button>
+                <button type="button" class="pos-cat-btn active" data-cat="all"><span class="cat-label">All</span><span class="cat-count"></span></button>
                 {% for category in categories %}
-                <button type="button" class="pos-cat-btn" data-cat="{{ category.id }}">{{ category.category_name }}</button>
+                <button type="button" class="pos-cat-btn" data-cat="{{ category.id }}"><span class="cat-label">{{ category.category_name }}</span><span class="cat-count"></span></button>
                 {% endfor %}
             </div>
 
@@ -988,13 +1136,16 @@
                     <div class="menu-item-col"
                          data-cat="{{ item.category_id }}"
                          data-name="{{ item.item_name|lower }}"
-                         data-search="{{ item.item_name|lower }} {{ item.category.category_name|lower }}">
-                        <div class="menu-card {% if item.is_vegetarian %}veg{% endif %}{% if row.sold_out %} sold-out{% endif %}"
+                         data-search="{{ item.item_name|lower }} {{ item.item_name_bn|default:'' }} {{ item.category.category_name|lower }}">
+                        <div class="menu-card {% if item.is_vegetarian %}veg{% endif %}{% if row.sold_out %} sold-out{% endif %}{% if row.expired %} expired{% endif %}"
                              role="button"
                              tabindex="0"
                              data-id="{{ item.id }}"
                              data-name="{{ item.item_name|escapejs }}"
+                             data-name-bn="{{ item.item_name_bn|default:''|escapejs }}"
                              data-price="{{ row.unit_price }}"
+                             data-image="{% if item.has_image %}{{ item.get_image_url }}{% endif %}"
+                             data-emoji="{% if item.is_vegetarian %}🥗{% else %}🍽️{% endif %}"
                              data-stock-tracked="{% if row.tracked %}1{% else %}0{% endif %}"
                              data-remaining="{% if row.tracked %}{{ row.remaining }}{% else %}{% endif %}"
                              data-sold-out="{% if row.sold_out %}1{% else %}0{% endif %}">
@@ -1011,6 +1162,7 @@
                             </div>
                             <div class="menu-card-body">
                                 <div class="menu-card-name">{{ item.item_name }}</div>
+                                {% if item.item_name_bn %}<div class="menu-card-name-bn">{{ item.item_name_bn }}</div>{% endif %}
                                 <div class="menu-card-meta">
                                     <span class="menu-card-price">Tk {{ row.unit_price }}</span>
                                     <span class="menu-card-cat">{{ item.category.category_name }}</span>
@@ -1044,8 +1196,8 @@
                     <span class="pos-step" data-step="items">② Items</span>
                     <span class="pos-step" data-step="pay">③ Pay</span>
                 </div>
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h5 class="mb-0 fw-bold"><i class="bi bi-receipt-cutoff me-2" style="color: var(--pos-success);"></i>Order</h5>
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <h6 class="mb-0 fw-bold fs-6"><i class="bi bi-receipt-cutoff me-2" style="color: var(--pos-success);"></i>Order</h6>
                     <div class="d-flex gap-2 align-items-center">
                         <label class="guest-toggle-wrap mb-0">
                             <input type="checkbox" id="guestModeToggle" onchange="toggleGuestMode()">
@@ -1100,10 +1252,6 @@
             </div>
 
             <div class="pos-cart-items-wrap">
-                <div id="cart-lines-header" class="cart-lines-header d-none">
-                    <span><i class="bi bi-basket3 me-1"></i><span id="cart-line-count">0 items</span></span>
-                    <span id="cart-token-hint" class="badge rounded-pill" style="background: rgba(16,185,129,0.25); color: #6ee7b7;">1 token</span>
-                </div>
                 <div class="pos-cart-items" id="cart-items-container">
                     <div class="empty-cart" id="empty-cart-msg">
                         <i class="bi bi-basket3 d-block"></i>
@@ -1115,9 +1263,14 @@
             </div>
 
             <div class="pos-cart-footer">
-                <div class="total-row"><span>Subtotal</span><span id="cart-subtotal">Tk 0.00</span></div>
-                <div class="total-row"><span>Tax</span><span id="cart-tax">Tk 0.00</span></div>
-                <div class="total-row grand"><span>Total</span><span id="cart-total" style="color: var(--pos-success);">Tk 0.00</span></div>
+                <div class="total-row grand">
+                    <span>Total</span>
+                    <span class="cart-total-meta d-none" id="cart-total-meta">
+                        <i class="bi bi-basket3 me-1"></i><span id="cart-line-count">0 items</span>
+                        <span id="cart-token-hint" class="badge rounded-pill ms-1" style="background: rgba(16,185,129,0.25); color: #6ee7b7;">1 token</span>
+                    </span>
+                    <span id="cart-total" style="color: var(--pos-success);">Tk 0.00</span>
+                </div>
                 <button type="button" class="btn-checkout" id="checkout-btn" onclick="processCheckout()" disabled>
                     <span><i class="bi bi-lightning-charge-fill me-1"></i> Complete Sale</span>
                     <span class="checkout-sub" id="checkout-sub"></span>
@@ -1291,16 +1444,60 @@ function filterMenuGrid() {
     if (countEl) countEl.textContent = visible + (visible === 1 ? ' item' : ' items');
 }
 
-document.getElementById('menu-search').addEventListener('input', filterMenuGrid);
+const searchInput = document.getElementById('menu-search');
+const searchClear = document.getElementById('menu-search-clear');
+
+function syncSearchClear() {
+    if (searchClear) searchClear.classList.toggle('show', searchInput.value.length > 0);
+}
+
+searchInput.addEventListener('input', () => { filterMenuGrid(); syncSearchClear(); });
+
+if (searchClear) {
+    searchClear.addEventListener('click', () => {
+        searchInput.value = '';
+        filterMenuGrid();
+        syncSearchClear();
+        searchInput.focus();
+    });
+}
+
+searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        searchInput.value = '';
+        filterMenuGrid();
+        syncSearchClear();
+        searchInput.blur();
+        focusRfidInput();
+    }
+});
 
 document.addEventListener('keydown', function(e) {
     if (e.key === '/' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
         e.preventDefault();
-        document.getElementById('menu-search').focus();
+        searchInput.focus();
     }
 });
 
+// Static per-category item counts on the filter chips
+(function initCategoryCounts() {
+    const cols = document.querySelectorAll('.menu-item-col');
+    const total = cols.length;
+    const byCat = {};
+    cols.forEach(col => {
+        const c = col.dataset.cat;
+        byCat[c] = (byCat[c] || 0) + 1;
+    });
+    document.querySelectorAll('.pos-cat-btn').forEach(btn => {
+        const cat = btn.dataset.cat;
+        const n = cat === 'all' ? total : (byCat[cat] || 0);
+        const el = btn.querySelector('.cat-count');
+        if (el) el.textContent = n;
+    });
+})();
+
 filterMenuGrid();
+syncSearchClear();
 updatePosSteps();
 updateTopbarCart();
 
@@ -1427,7 +1624,12 @@ function addToCart(id, name, price) {
         return;
     }
     if (cart[id]) cart[id].qty += 1;
-    else cart[id] = { name, price, qty: 1 };
+    else cart[id] = {
+        name, price, qty: 1,
+        image: card?.dataset.image || '',
+        emoji: card?.dataset.emoji || '🍽️',
+        nameBn: card?.dataset.nameBn || '',
+    };
     renderCart();
     if (card) {
         card.classList.remove('add-flash');
@@ -1447,6 +1649,13 @@ function updateQty(id, change) {
     cart[id].qty += change;
     if (cart[id].qty <= 0) delete cart[id];
     renderCart();
+}
+
+function removeLine(id) {
+    if (!cart[id]) return;
+    delete cart[id];
+    renderCart();
+    focusRfidInput();
 }
 
 function clearCart() {
@@ -1470,18 +1679,27 @@ function renderCart() {
             const item = cart[id];
             const line = item.price * item.qty;
             subtotal += line;
+            const thumb = item.image
+                ? `<img src="${item.image}" alt="" loading="lazy">`
+                : `<span class="cart-line-emoji">${item.emoji || '🍽️'}</span>`;
+            const bn = item.nameBn ? `<span class="cart-line-bn">${escapeHtml(item.nameBn)}</span>` : '';
             html += `
             <div class="cart-line">
-                <div>
-                    <div class="item-name">${item.name}</div>
+                <div class="cart-line-thumb">${thumb}</div>
+                <div class="cart-line-info">
+                    <div class="item-name">${escapeHtml(item.name)}</div>
+                    ${bn}
                     <small style="color:var(--pos-muted);">${formatMoney(item.price)} each</small>
                 </div>
                 <div class="qty-control">
-                    <button type="button" onclick="updateQty(${id}, -1)">−</button>
+                    <button type="button" onclick="updateQty(${id}, -1)" aria-label="Decrease">−</button>
                     <span class="fw-bold px-1">${item.qty}</span>
-                    <button type="button" onclick="updateQty(${id}, 1)">+</button>
+                    <button type="button" onclick="updateQty(${id}, 1)" aria-label="Increase">+</button>
                 </div>
-                <div class="line-total">${formatMoney(line)}</div>
+                <div class="line-end">
+                    <div class="line-total">${formatMoney(line)}</div>
+                    <button type="button" class="line-remove" onclick="removeLine(${id})" aria-label="Remove" title="Remove"><i class="bi bi-trash3"></i></button>
+                </div>
             </div>`;
         });
         linesEl.innerHTML = html;
@@ -1489,27 +1707,25 @@ function renderCart() {
 
     const itemTypes = keys.length;
     const qtyTotal = keys.reduce((s, id) => s + cart[id].qty, 0);
-    document.getElementById('cart-subtotal').textContent = formatMoney(subtotal);
-    document.getElementById('cart-tax').textContent = formatMoney(0);
     document.getElementById('cart-total').textContent = formatMoney(subtotal);
 
     const zone = document.getElementById('pos-cart-zone');
-    const headerBar = document.getElementById('cart-lines-header');
+    const totalMeta = document.getElementById('cart-total-meta');
     const countEl = document.getElementById('cart-line-count');
     const hint = document.getElementById('cart-token-hint');
     const cartScroll = document.getElementById('cart-items-container');
 
     if (itemTypes > 0) {
         zone.classList.add('cart-has-items');
-        headerBar.classList.remove('d-none');
+        if (totalMeta) totalMeta.classList.remove('d-none');
         countEl.textContent = itemTypes + ' item(s) · ' + qtyTotal + ' pcs';
-        if (hint) hint.textContent = '→ 1 token';
+        if (hint) hint.textContent = '1 token';
         requestAnimationFrame(() => {
             cartScroll.scrollTop = cartScroll.scrollHeight;
         });
     } else {
         zone.classList.remove('cart-has-items');
-        headerBar.classList.add('d-none');
+        if (totalMeta) totalMeta.classList.add('d-none');
     }
 
     syncMenuBadges();

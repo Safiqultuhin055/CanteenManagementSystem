@@ -20,20 +20,25 @@ class PosMenuStock:
     tracked: bool
     sold_out: bool
     low_stock: bool
+    expired: bool = False
 
     @property
     def stock_label(self) -> str:
         if not self.tracked:
             return 'Open'
+        if self.expired:
+            return 'Expired'
         if self.sold_out:
             return 'Sold out'
         return f'{self.remaining} left'
 
     @property
     def stock_level(self) -> str:
-        """CSS hook: ok | low | out | open."""
+        """CSS hook: ok | low | out | open | expired."""
         if not self.tracked:
             return 'open'
+        if self.expired:
+            return 'expired'
         if self.sold_out:
             return 'out'
         if self.remaining is not None and self.remaining <= 5:
@@ -61,7 +66,8 @@ def build_pos_menu_stock(menu_items, stock_date=None) -> list[PosMenuStock]:
                 - int(stock.sold_quantity or 0)
                 - int(stock.waste_quantity or 0),
             )
-            sold_out = not stock.is_available or remaining <= 0
+            expired = bool(stock.expired_date and stock.expired_date < stock_date)
+            sold_out = expired or not stock.is_available or remaining <= 0
             result.append(
                 PosMenuStock(
                     item=item,
@@ -74,6 +80,7 @@ def build_pos_menu_stock(menu_items, stock_date=None) -> list[PosMenuStock]:
                     tracked=True,
                     sold_out=sold_out,
                     low_stock=not sold_out and remaining <= 5,
+                    expired=expired,
                 )
             )
         else:

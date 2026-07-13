@@ -105,6 +105,8 @@ def _load_line_items(lines, stock_date):
 
         unit_price = menu_item.unit_price
         if stock:
+            if stock.expired_date and stock.expired_date < stock_date:
+                raise CheckoutError(f"{menu_item.item_name} is expired")
             remaining = stock.prepared_quantity - stock.sold_quantity - stock.waste_quantity
             if remaining < line['qty']:
                 raise CheckoutError(

@@ -50,7 +50,7 @@ class MenuItemAdmin(CanteenModelAdmin):
     fieldsets = (
         (None, {
             'fields': (
-                'item_name', 'item_code', 'category', 'description',
+                'item_name', 'item_name_bn', 'item_code', 'category', 'description',
                 'unit_price', 'tax_rate', 'is_vegetarian',
             ),
         }),
@@ -116,8 +116,56 @@ class DailyFoodStockAdmin(CanteenModelAdmin):
     list_filter = ('stock_date', 'is_available')
 
 
+def _sync_daily_waste(menu_item_id, waste_date):
+    """Recompute daily_food_stock.waste_quantity from FOOD waste records.
+
+    Keeps POS remaining (prepared - sold - waste) aligned with wastage entries.
+    """
+    if not menu_item_id or not waste_date:
+        return
+    from django.db.models import Sum
+    total = WasteRecord.objects.filter(
+        waste_type=WasteRecord.WASTE_TYPE_FOOD,
+        menu_item_id=menu_item_id,
+        waste_date=waste_date,
+        is_deleted=False,
+        is_active=True,
+    ).aggregate(total=Sum('quantity'))['total'] or 0
+    stock = DailyFoodStock.objects.filter(
+        menu_item_id=menu_item_id,
+        stock_date=waste_date,
+        is_deleted=False,
+    ).first()
+    if stock:
+        stock.waste_quantity = int(round(float(total)))
+        stock.save(update_fields=['waste_quantity', 'updated_at'])
+
+
 @admin.register(WasteRecord)
 class WasteRecordAdmin(CanteenModelAdmin):
     form = WasteRecordAdminForm
-    list_display = ('waste_date', 'waste_type', 'waste_reason', 'quantity', 'estimated_cost')
-    list_filter = ('waste_type', 'waste_date')
+    list_display = ('waste_date', 'waste_type', 'menu_item', 'waste_reason', 'quantity', 'estimated_cost')
+    list_filter = ('waste_type', 'waste_reason', 'waste_date')
+
+    def save_model(self, request, obj, form, change):
+        # Capture prior (item, date) so a moved record resyncs the old daily row too.
+        prev = None
+        if change and obj.pk:
+            prev = WasteRecord.objects.filter(pk=obj.pk).values(
+                'menu_item_id', 'waste_date'
+            ).first()
+        super().save_model(request, obj, form, change)
+        _sync_daily_waste(obj.menu_item_id, obj.waste_date)
+        if prev and (prev['menu_item_id'], prev['waste_date']) != (obj.menu_item_id, obj.waste_date):
+            _sync_daily_waste(prev['menu_item_id'], prev['waste_date'])
+
+    def delete_model(self, request, obj):
+        item_id, wdate = obj.menu_item_id, obj.waste_date
+        super().delete_model(request, obj)
+        _sync_daily_waste(item_id, wdate)
+
+    def delete_queryset(self, request, queryset):
+        affected = list(queryset.values_list('menu_item_id', 'waste_date').distinct())
+        super().delete_queryset(request, queryset)
+        for item_id, wdate in affected:
+            _sync_daily_waste(item_id, wdate)

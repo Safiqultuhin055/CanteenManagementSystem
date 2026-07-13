@@ -21,6 +21,7 @@ class FoodCategory(models.Model):
 class MenuItem(models.Model):
     category = models.ForeignKey(FoodCategory, on_delete=models.PROTECT, db_column='category_id')
     item_name = models.CharField(max_length=200, unique=True)
+    item_name_bn = models.CharField('Name (Bangla)', max_length=200, blank=True, null=True)
     item_code = models.CharField(max_length=50, unique=True)
     description = models.CharField(max_length=500, blank=True, null=True)
     unit_price = models.DecimalField(max_digits=18, decimal_places=2)
@@ -111,6 +112,7 @@ class RawMaterialStock(models.Model):
 class DailyFoodStock(models.Model):
     menu_item = models.ForeignKey(MenuItem, on_delete=models.PROTECT, db_column='menu_item_id')
     stock_date = models.DateField()
+    expired_date = models.DateField('Expired date', null=True, blank=True)
     prepared_quantity = models.IntegerField(default=0)
     sold_quantity = models.IntegerField(default=0)
     waste_quantity = models.IntegerField(default=0)
