@@ -7,7 +7,14 @@ from core.admin_forms import (
     OrderDetailAdminForm,
     PaymentAdminForm,
 )
-from .models import GuestCard, Order, OrderDetail, Payment
+from .models import (
+    GuestCard,
+    Order,
+    OrderDetail,
+    Payment,
+    VoiceRequestItem,
+    VoiceRequestLog,
+)
 
 
 class OrderDetailInline(CanteenTabularInline):
@@ -37,3 +44,39 @@ class GuestCardAdmin(CanteenModelAdmin):
     form = GuestCardAdminForm
     list_display = ('card_number', 'guest_name', 'loaded_balance', 'used_balance', 'card_status')
     search_fields = ('card_number', 'guest_name')
+
+
+class VoiceRequestItemInline(CanteenTabularInline):
+    model = VoiceRequestItem
+    extra = 0
+    autocomplete_all_relations = False
+    fields = ('item_name', 'item_name_bn', 'quantity', 'unit_price', 'line_total')
+    readonly_fields = fields
+    can_delete = False
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(VoiceRequestLog)
+class VoiceRequestLogAdmin(CanteenModelAdmin):
+    """Read-only log of what customers asked the voice assistant — for demand
+    analysis (which products, which kinds of requests)."""
+    autocomplete_all_relations = False
+    list_display = (
+        'created_at', 'customer_name', 'user_text', 'qty_total',
+        'subtotal', 'ready_to_confirm', 'needs_more_info', 'provider',
+    )
+    list_filter = ('ready_to_confirm', 'needs_more_info', 'provider', 'created_at')
+    search_fields = ('customer_name', 'user_text', 'reply_text')
+    date_hierarchy = 'created_at'
+    inlines = [VoiceRequestItemInline]
+
+    def get_readonly_fields(self, request, obj=None):
+        return [f.name for f in self.model._meta.fields]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False

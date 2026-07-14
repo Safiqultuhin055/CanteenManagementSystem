@@ -2499,8 +2499,8 @@ window.VOICE_ENABLED = {% if voice_enabled %}true{% else %}false{% endif %};
 
         const hasCard = el('active_card_id').value !== '';
         const greet = hasCard
-            ? 'স্বাগতম! বলুন, কী অর্ডার করবেন?'
-            : 'স্বাগতম! অর্ডার করতে আগে আপনার কার্ড যুক্ত করুন।';
+            ? 'মাইমুন কমপ্লেক্স ক্যান্টিনে আপনাকে আন্তরিক স্বাগতম। আমি আপনার অর্ডার গ্রহণ করতে প্রস্তুত।'
+            : 'মাইমুন কমপ্লেক্স ক্যান্টিনে আপনাকে আন্তরিক স্বাগতম। অর্ডার করতে আগে দয়া করে আপনার কার্ড যুক্ত করুন।';
         appendMsg('bot', greet);
         convo.push({ role: 'assistant', content: greet });
         setHint(speechSupported ? 'শুনছি… বলুন' : 'এই ব্রাউজারে ভয়েস নেই — টাইপ করুন');

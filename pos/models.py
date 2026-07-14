@@ -100,6 +100,59 @@ class OrderDetail(models.Model):
         return f"{self.quantity} x {self.item_name}"
 
 
+class VoiceRequestLog(models.Model):
+    """One turn of the Bangla voice assistant — what the customer asked and the
+    order snapshot at that moment. Used to analyse demand (which products,
+    which kinds of requests). Rows with ready_to_confirm=True are the strongest
+    demand signal (a completed order intent)."""
+    customer_name = models.CharField(max_length=300, blank=True, null=True)
+    user_text = models.TextField(blank=True, null=True)
+    reply_text = models.TextField(blank=True, null=True)
+    provider = models.CharField(max_length=50, blank=True, null=True)
+    item_count = models.IntegerField(default=0)
+    qty_total = models.IntegerField(default=0)
+    subtotal = models.DecimalField(max_digits=18, decimal_places=2, default=0.00)
+    needs_more_info = models.BooleanField(default=False)
+    ready_to_confirm = models.BooleanField(default=False)
+    issues = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'voice_request_logs'
+        managed = False
+        ordering = ('-created_at',)
+
+    def __str__(self):
+        return f"Voice #{self.pk}: {(self.user_text or '')[:40]}"
+
+
+class VoiceRequestItem(models.Model):
+    """A product line inside a voice turn — one row per menu item requested.
+    GROUP BY menu_item_id to see which products customers ask for most."""
+    voice_request_log = models.ForeignKey(
+        VoiceRequestLog,
+        on_delete=models.CASCADE,
+        db_column='voice_request_log_id',
+        related_name='items',
+    )
+    menu_item = models.ForeignKey(
+        MenuItem, on_delete=models.SET_NULL, null=True, blank=True, db_column='menu_item_id'
+    )
+    item_name = models.CharField(max_length=300, blank=True, null=True)
+    item_name_bn = models.CharField(max_length=300, blank=True, null=True)
+    quantity = models.IntegerField(default=0)
+    unit_price = models.DecimalField(max_digits=18, decimal_places=2, default=0.00)
+    line_total = models.DecimalField(max_digits=18, decimal_places=2, default=0.00)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'voice_request_items'
+        managed = False
+
+    def __str__(self):
+        return f"{self.quantity} x {self.item_name}"
+
+
 class Payment(models.Model):
     payment_number = models.CharField(max_length=50, unique=True)
     order = models.ForeignKey(Order, on_delete=models.CASCADE, db_column='order_id')
