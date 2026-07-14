@@ -178,7 +178,7 @@ def api_voice_provider(request):
     """Report which LLM integration is currently active (for the modal header)."""
     from core.api_registry import get_active_llm
     labels = {
-        'anthropic': 'Claude', 'gemini': 'Gemini',
+        'anthropic': 'Claude', 'gemini': 'Gemini', 'local': 'Local LLM',
         'openai': 'OpenAI', 'none': 'নিষ্ক্রিয়',
     }
     cfg = get_active_llm()

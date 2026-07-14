@@ -59,6 +59,7 @@ class ApiIntegration(models.Model):
     PROVIDER_CHOICES = [
         ('anthropic', 'Anthropic (Claude)'),
         ('gemini', 'Google AI Studio (Gemini)'),
+        ('local', 'Local / Self-hosted LLM'),
         ('openai', 'OpenAI'),
         ('azure_tts', 'Azure Speech (TTS)'),
         ('google', 'Google'),

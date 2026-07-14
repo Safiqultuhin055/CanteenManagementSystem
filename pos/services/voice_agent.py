@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 
 import requests
 from django.conf import settings
@@ -166,19 +167,27 @@ def run_voice_turn(*, history, customer_name=None, stock_date=None):
     history: list of {'role': 'user'|'assistant', 'content': str}
     Returns a dict the view can hand straight back to the browser.
     """
-    from core.api_registry import get_active_llm
-    cfg = get_active_llm()
-    if not cfg.is_configured:
+    from core.api_registry import get_active_llm_chain
+    chain = get_active_llm_chain()
+    if not chain:
         raise VoiceAgentError('Voice assistant not configured — add an active API key')
 
     stock_date = stock_date or get_business_date()
     menu = build_menu_snapshot(stock_date)
     menu_by_id = {row['id']: row for row in menu}
 
+    # Slim menu for the prompt (fewer tokens → faster). Keep only what the model
+    # needs to match items and respect stock; full data stays in menu_by_id.
+    menu_slim = [
+        {'id': r['id'], 'name': r['name'], 'bn': r['name_bn'],
+         'price': r['price'], 'avail': r['availability'], 'left': r['remaining']}
+        for r in menu
+    ]
+
     system = _SYSTEM_TEMPLATE.format(
         canteen='MC-Canteen',
         customer=customer_name or 'গ্রাহক',
-        menu_json=json.dumps(menu, ensure_ascii=False),
+        menu_json=json.dumps(menu_slim, ensure_ascii=False),
     )
 
     messages = [
@@ -188,15 +197,29 @@ def run_voice_turn(*, history, customer_name=None, stock_date=None):
     ]
     if not messages:
         raise VoiceAgentError('No conversation input')
+    # Only the last few turns matter for the current order → less to process.
+    messages = messages[-10:]
 
-    if cfg.provider == 'gemini':
-        turn = _call_gemini(cfg, system, messages)
-    elif cfg.provider == 'anthropic':
-        turn = _call_anthropic(cfg, system, messages)
-    else:
-        raise VoiceAgentError(f'Unsupported voice provider: {cfg.provider}')
-
-    return _finalize(turn, menu_by_id)
+    # Try each active provider best-first; fall through on failure (e.g. a dead
+    # key) so a misconfigured provider doesn't take voice ordering down.
+    dispatch = {
+        'gemini': _call_gemini,
+        'anthropic': _call_anthropic,
+        'local': _call_local,
+    }
+    last_error = None
+    for cfg in chain:
+        fn = dispatch.get(cfg.provider)
+        if not fn:
+            continue
+        try:
+            turn = fn(cfg, system, messages)
+            return _finalize(turn, menu_by_id)
+        except VoiceAgentError as exc:
+            last_error = exc
+            logger.warning('Provider %s failed (%s); trying next', cfg.provider, exc)
+            continue
+    raise last_error or VoiceAgentError('No usable voice provider')
 
 
 # ---- Anthropic (Claude) -----------------------------------------------------
@@ -295,7 +318,79 @@ def _call_gemini(cfg, system, messages):
     except (KeyError, IndexError, ValueError, TypeError) as exc:
         logger.error('Gemini parse error: %s | %s', exc, str(data)[:400])
         raise VoiceAgentError('Voice assistant returned no order') from exc
+
+
+# ---- Local / self-hosted LLM gateway ---------------------------------------
+# Plain prompt->text API (no native tool calling): POST {base}/v1/chat with an
+# X-API-KEY header and {project, model, prompt, stream}. We ask the model to
+# emit a single JSON object and parse it out of the returned text.
+
+_JSON_INSTRUCTION = (
+    '\n\nএখন গ্রাহকের শেষ কথার উত্তর তৈরি করো। কেবল একটি বৈধ JSON object আউটপুট করবে — '
+    'কোনো markdown, কোড-ফেন্স (```), বা অতিরিক্ত লেখা নয়। ঠিক এই স্কিমা: '
+    '{"reply_bn": "বাংলা উত্তর", "items": [{"menu_item_id": 0, "quantity": 0}], '
+    '"needs_more_info": false, "ready_to_confirm": false}'
+)
+
+
+def _build_text_prompt(system, messages):
+    lines = [system, '', 'কথোপকথন এখন পর্যন্ত:']
+    for m in messages:
+        who = 'গ্রাহক' if m['role'] == 'user' else 'সহকারী'
+        lines.append(f'{who}: {m["content"]}')
+    lines.append(_JSON_INSTRUCTION)
+    return '\n'.join(lines)
+
+
+def _parse_json_turn(text):
+    t = (text or '').strip()
+    if t.startswith('```'):
+        t = re.sub(r'^```[a-zA-Z]*\s*', '', t)
+        t = re.sub(r'\s*```$', '', t).strip()
+    try:
+        return json.loads(t)
+    except (ValueError, TypeError):
+        pass
+    i, j = t.find('{'), t.rfind('}')
+    if 0 <= i < j:
+        try:
+            return json.loads(t[i:j + 1])
+        except (ValueError, TypeError):
+            pass
+    logger.error('Local LLM parse fail: %s', t[:400])
     raise VoiceAgentError('Voice assistant returned no order')
+
+
+def _call_local(cfg, system, messages):
+    model = cfg.api_model or 'gpt-oss:120b-cloud'
+    base = cfg.base_url or 'http://localhost:8009'
+    endpoint = f'{base.rstrip("/")}/v1/chat'
+    payload = {
+        'model': model,
+        'prompt': _build_text_prompt(system, messages),
+        'stream': False,
+    }
+    # Some gateways require a project field; include it only when configured.
+    project = (cfg.extra or {}).get('project')
+    if project:
+        payload['project'] = project
+    try:
+        resp = requests.post(
+            endpoint, headers={'X-API-KEY': cfg.api_key},
+            json=payload, timeout=_TIMEOUT,
+        )
+    except requests.RequestException as exc:
+        logger.exception('Local LLM request failed')
+        raise VoiceAgentError('Voice assistant unreachable') from exc
+    if resp.status_code != 200:
+        logger.error('Local LLM %s: %s', resp.status_code, resp.text[:400])
+        raise VoiceAgentError(f'Voice assistant error ({resp.status_code})')
+
+    try:
+        text = resp.json().get('response') or ''
+    except ValueError:
+        text = resp.text
+    return _parse_json_turn(text)
 
 
 def _finalize(turn, menu_by_id):
