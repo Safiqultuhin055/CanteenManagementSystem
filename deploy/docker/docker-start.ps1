@@ -64,6 +64,15 @@ Write-Host "Initializing database on ${DbHost} (if needed)..." -ForegroundColor 
     -SqlPassword $DbPassword `
     -SqlContainer $SqlCmdContainer
 
+$RepoRoot = Split-Path (Split-Path $Deploy -Parent) -Parent
+$py = Join-Path $RepoRoot "venv\Scripts\python.exe"
+if (-not (Test-Path $py)) { $py = "python" }
+Write-Host "Preflight: checking dependency / portability drift..." -ForegroundColor Cyan
+& $py (Join-Path $Deploy "preflight.py")
+if ($LASTEXITCODE -ne 0) {
+    throw "Preflight failed — fix requirements.txt drift before deploying (see errors above)."
+}
+
 Write-Host "Building and starting container..." -ForegroundColor Cyan
 Set-Location $Deploy
 docker compose --env-file $envFile up -d --build

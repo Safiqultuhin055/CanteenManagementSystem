@@ -70,13 +70,16 @@ def pos_dashboard(request):
         .order_by('category__category_name', 'item_name')
     )
     menu_stock = build_pos_menu_stock(menu_items)
-    from django.conf import settings
+    from core.api_registry import get_active_llm
+    # Voice ordering is on whenever ANY LLM provider is configured — DB-driven
+    # (admin → API integrations), with .env as fallback. Do NOT gate on a single
+    # provider's env key: that hides the button even when Gemini/local is active.
     return render(request, 'pos/pos_dashboard.html', {
         'categories': categories,
         'menu_items': menu_items,
         'menu_stock': menu_stock,
         'receipt_defaults': get_receipt_settings(),
-        'voice_enabled': bool(getattr(settings, 'ANTHROPIC_API_KEY', '')),
+        'voice_enabled': get_active_llm().is_configured,
     })
 
 

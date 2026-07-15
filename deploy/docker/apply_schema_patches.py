@@ -20,12 +20,24 @@ django.setup()
 from django.conf import settings  # noqa: E402
 from django.db import connection  # noqa: E402
 
-# Additive, idempotent patches applied on every start (newest schema bits).
-PATCHES = [
-    '23_menu_item_bangla_name.sql',
-    '24_daily_stock_expired_date.sql',
-    '25_api_integrations.sql',
-]
+# Additive patches (files 01–22 are the fresh-init baseline). Anything numbered
+# at or above this is an idempotent, guarded patch applied on every start.
+# Auto-discovered so a NEW patch file never has to be hand-registered here —
+# dropping database/NN_*.sql (NN >= threshold) is enough.
+PATCH_MIN_NUMBER = 23
+
+
+def _discover_patches(db_dir):
+    """Return additive patch filenames sorted by leading number.
+
+    Matches files like `26_voice_request_logs.sql` with number >= threshold.
+    """
+    found = []
+    for name in os.listdir(db_dir):
+        m = re.match(r'^(\d+)[a-z]?_.*\.sql$', name, re.IGNORECASE)
+        if m and int(m.group(1)) >= PATCH_MIN_NUMBER:
+            found.append((int(m.group(1)), name))
+    return [name for _, name in sorted(found)]
 
 
 def _run_file(path):
@@ -40,7 +52,9 @@ def _run_file(path):
 
 def main():
     db_dir = os.path.join(settings.BASE_DIR, 'database')
-    for name in PATCHES:
+    patches = _discover_patches(db_dir)
+    print(f'  discovered {len(patches)} additive patch(es): {", ".join(patches) or "none"}')
+    for name in patches:
         path = os.path.join(db_dir, name)
         if not os.path.exists(path):
             print(f'  skip (missing): {name}')
