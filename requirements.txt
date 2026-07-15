@@ -1,9 +1,22 @@
-Django>=5.0,<6.1
-mssql-django>=1.4
+# --- Core framework ---
+Django>=5.2,<6.1
+
+# --- Database (Microsoft SQL Server) ---
+mssql-django>=1.7
+pyodbc>=5.3
+
+# --- Config ---
 python-decouple>=3.8
-pyodbc>=5.0
-Pillow>=10.0
-duckduckgo-search>=6.0
-requests>=2.31
+
+# --- Media / images ---
+Pillow>=12.0
+
+# --- Web search (menu/demand lookups) ---
+duckduckgo-search>=8.0
+
+# --- HTTP client (LLM providers, TTS, translate) ---
+requests>=2.32
+
+# --- Production serving / static files ---
 waitress>=3.0
 whitenoise>=6.6
