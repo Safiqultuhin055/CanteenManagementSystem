@@ -1,3 +1,4 @@
+{% load static %}
 <h2 id="overview">Overview</h2>
 <p>CanteenSys manages employee canteen sales from card scan through kitchen preparation to token distribution. Each role sees only the menus assigned by your administrator.</p>
 
@@ -20,15 +21,55 @@
 <p>The home screen shows live counts: employees, menu items, orders today, sales revenue, kitchen queue, and advance balance. Use quick-action tiles for POS, Kitchen, Distribution, and Reports.</p>
 
 <h2 id="pos">Point of Sale (POS)</h2>
-<h3>Employee sale</h3>
-<ul>
-    <li>Scan or enter the employee RFID card number.</li>
-    <li>Confirm employee name and available balance.</li>
-    <li>Add menu items by category; adjust quantities.</li>
-    <li>Complete checkout — a token number is generated for kitchen and distribution.</li>
-</ul>
+<p>The POS is the sales counter screen. It supports two ways to build an order — a manual touch/scan flow, and a hands-free <strong>Bangla voice assistant</strong>. Both end the same way: one order, one token, one auto-printed slip.</p>
+
+<h3>Manual employee sale</h3>
+<div class="step-card"><span class="step-num">1</span> Scan (or type) the employee <strong>RFID card number</strong>. The card resolves by exact, case-insensitive, or partial UID match.</div>
+<div class="step-card"><span class="step-num">2</span> Confirm the employee name, department, and available <strong>advance + credit</strong> balance shown on screen.</div>
+<div class="step-card"><span class="step-num">3</span> Add menu items by category and adjust quantities. Sold-out / expired items are blocked; remaining stock is shown per item.</div>
+<div class="step-card"><span class="step-num">4</span> Press <strong>Complete Sale</strong>. One token number is generated and the customer slip prints automatically.</div>
+
 <h3>Guest / cash</h3>
-<p>Use guest card or cash payment as configured. Guest cards track deposit and loaded balance separately.</p>
+<p>Turn on guest mode for a walk-in cash sale — no card needed. The order is recorded as a <code>CASH</code> sale with customer name <em>Guest Customer</em>. Employee sales are <code>CARD</code> and deduct from advance balance first, then credit.</p>
+
+<div class="doc-callout"><strong>One token per sale:</strong> however many items you add, checkout creates a single daily token (<code>Token #N</code>, reset each business day) that the kitchen and distribution monitor both track.</div>
+
+<h2 id="voice">Voice ordering assistant (Bangla)</h2>
+<p>When any AI provider is configured (Admin → API integrations — Claude, Gemini, or a self-hosted LLM), a <strong>Voice</strong> button appears on the POS. The customer speaks in Bangla, a female sales-assistant persona replies by voice, and the order is built, confirmed, and printed hands-free.</p>
+
+<h3>Watch the full walkthrough</h3>
+<p>This narrated animation follows one real order end to end: the customer walks up, punches the RFID card, talks to the AI, confirms, collects the auto-printed slip, and sees the token turn <strong>Ready</strong> on the canteen monitor. Plays with real Bangla voice — turn your sound on.</p>
+
+<div style="max-width:900px;margin:1rem 0 1.25rem;">
+    <video controls playsinline preload="metadata"
+           poster="{% static 'videos/voice_order_poster.jpg' %}"
+           style="width:100%;border-radius:16px;border:1px solid #e2e8f0;box-shadow:0 16px 44px rgba(2,6,23,0.28);background:#0a0f1c;display:block;">
+        <source src="{% static 'videos/voice_order_demo.mp4' %}" type="video/mp4">
+        Your browser cannot play this video.
+        <a href="{% static 'videos/voice_order_demo.mp4' %}">Download the walkthrough (MP4)</a>.
+    </video>
+    <p style="font-size:0.8rem;color:#64748b;margin-top:0.55rem;display:flex;flex-wrap:wrap;gap:0.75rem;">
+        <span>🔊 Bangla voice · ~60s</span>
+        <span>🎧 Turn sound on</span>
+        <a href="{% static 'videos/voice_order_demo.mp4' %}" download><i class="bi bi-download me-1"></i>Download MP4</a>
+    </p>
+</div>
+
+<h3>Step-by-step: how the order becomes an invoice</h3>
+<p>Under the hood, each turn of the conversation is one round-trip to the AI; the final confirm turns the spoken order into a real, paid invoice.</p>
+<table class="table doc-table table-bordered">
+    <thead><tr><th>#</th><th>What the customer sees</th><th>What the system does</th></tr></thead>
+    <tbody>
+        <tr><td>1</td><td>Assistant greets and asks for the card</td><td>Voice modal opens, speaks the welcome, and starts the <code>bn-BD</code> microphone; without a card it asks the customer to punch one.</td></tr>
+        <tr><td>2</td><td>Customer punches the RFID card</td><td>The card is resolved to an employee; name, department, and balance are shown before ordering.</td></tr>
+        <tr><td>3</td><td>Customer speaks an item + quantity</td><td>Speech becomes text and is sent to the active AI provider (Claude, Gemini, or self-hosted).</td></tr>
+        <tr><td>4</td><td>Assistant repeats the order back</td><td>The model returns the full order via the <code>submit_turn</code> tool; the system caps quantities to live stock and computes the total.</td></tr>
+        <tr><td>5</td><td>Customer says "কনফার্ম"</td><td><code>ready_to_confirm</code> becomes true; items are pushed into the cart and checkout runs.</td></tr>
+        <tr><td>6</td><td>Token announced by voice</td><td>A daily token, order, order-details, payment, and kitchen-queue rows are created in one atomic transaction; balance is deducted.</td></tr>
+        <tr><td>7</td><td>Slip prints; token turns Ready</td><td>The 80 mm slip (token + barcode) prints; the token joins the live canteen monitor and blinks under <strong>Ready</strong> when the kitchen marks it done.</td></tr>
+    </tbody>
+</table>
+<div class="doc-callout warning"><strong>Requirements:</strong> the voice button only appears when an AI provider is active. Speech recognition needs a Chromium-based browser and microphone permission; Bangla text-to-speech is served by the app, so no Windows Bangla voice is required. If speech is unavailable, the customer can type instead.</div>
 
 <h2 id="kitchen">Kitchen (KDS)</h2>
 <ul>
