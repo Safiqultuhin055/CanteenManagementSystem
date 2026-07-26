@@ -26,6 +26,19 @@ def is_admin_user(user) -> bool:
     return bool(user_role_codes(user) & {'SUPER_ADMIN', 'ADMIN'})
 
 
+# Roles allowed to run guest (cash) orders in the POS. Others never see the
+# Guest toggle and are rejected server-side if they craft the request.
+GUEST_MODE_ROLE_CODES = {'SUPER_ADMIN', 'ADMIN', 'CASHIER'}
+
+
+def can_use_guest_mode(user) -> bool:
+    if not user.is_authenticated:
+        return False
+    if getattr(user, 'is_superuser', False):
+        return True
+    return bool(user_role_codes(user) & GUEST_MODE_ROLE_CODES)
+
+
 def user_permission_codes(user) -> set[str]:
     if not user.is_authenticated:
         return set()

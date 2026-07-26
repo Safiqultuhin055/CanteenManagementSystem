@@ -57,9 +57,51 @@ Default superuser (from seed data): `superadmin` / `Admin@123`
 
 ## Main modules
 
-- **POS** — sales checkout and token generation
+- **POS** — RFID/NFC card checkout, cash/guest orders, voice ordering, token generation
 - **Kitchen** — order queue (KDS)
 - **Distribution** — pickup counter
 - **Balance** — employee advance, credit, allocations
 - **Inventory** — menu, daily stock, waste
-- **Admin** — master data and settings (`/admin/`)
+- **Admin** — master data and settings (`/admin/`), API integrations, system settings
+
+## Roles & access
+
+Seeded roles (`database/09_seed_data.sql`), resolved via `users/permissions.py`:
+
+| Role | Code | Access |
+|------|------|--------|
+| Super Administrator | `SUPER_ADMIN` | Full system |
+| Administrator | `ADMIN` | Administrative |
+| Manager | `MANAGER` | Management |
+| Cashier | `CASHIER` | POS / billing |
+| Kitchen Staff | `KITCHEN` | KDS |
+| Distribution Staff | `DISTRIBUTION` | Pickup counter |
+
+Menu/permission gating is DB-driven (`roles`, `permissions`, `role_permissions`,
+plus per-user `user_permissions` / `user_menu_grants`).
+
+## POS checkout modes
+
+- **Card** — scan RFID/NFC; charges the employee balance/credit.
+- **Guest (cash)** — walk-in cash sale, no card. The **Guest** toggle is
+  **role-gated**: visible only to `SUPER_ADMIN`, `ADMIN`, `CASHIER`. Other roles
+  never see it, and the checkout API rejects guest orders from unauthorized roles
+  (`pos/views.py` → `api_checkout`, `users.permissions.can_use_guest_mode`).
+
+## Voice ordering (AI)
+
+Bangla voice/text ordering in the POS (`pos/services/voice_agent.py`). The **Voice**
+button shows whenever any LLM provider is configured — no code flag, fully DB-driven
+via **Admin → API integrations** (`core.api_registry.get_active_llm`).
+
+Supported providers (tried best-first, with fallthrough on failure):
+
+- **Anthropic (Claude)** — native tool calling
+- **Google (Gemini)** — JSON schema response
+- **Local / self-hosted gateway** — `POST {base_url}/v1/chat` with `X-API-KEY`,
+  body `{model, prompt, stream}`; the model returns a single JSON turn
+
+Configure each provider's key, model, and `base_url` in the admin. Set `is_default`
+to pick the primary; inactive rows are skipped. If the active provider is
+unreachable the assistant shows **"Voice assistant unreachable"** — check the
+provider's `base_url` is running and reachable from the app host.

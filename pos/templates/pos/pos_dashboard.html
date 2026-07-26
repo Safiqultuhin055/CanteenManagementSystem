@@ -1387,10 +1387,12 @@
                 <div class="d-flex justify-content-between align-items-center mb-1">
                     <h6 class="mb-0 fw-bold fs-6"><i class="bi bi-receipt-cutoff me-2" style="color: var(--pos-success);"></i>Order</h6>
                     <div class="d-flex gap-2 align-items-center">
+                        {% if guest_enabled %}
                         <label class="guest-toggle-wrap mb-0">
                             <input type="checkbox" id="guestModeToggle" onchange="toggleGuestMode()">
                             <i class="bi bi-cash-coin"></i> Guest
                         </label>
+                        {% endif %}
                         <button type="button" class="btn btn-sm btn-outline-danger border-secondary pos-btn-icon" onclick="clearCart()" title="Clear cart">
                             <i class="bi bi-trash3"></i>
                         </button>
@@ -1405,7 +1407,7 @@
                     <i class="bi bi-nfc-symbol fs-2 d-block mb-2" style="color: var(--pos-accent);"></i>
                     <div>
                         <div class="fw-semibold scan-label">Scan RFID / NFC Card</div>
-                        <small style="color: var(--pos-muted);">Or enable Cash / Guest mode</small>
+                        <small style="color: var(--pos-muted);">{% if guest_enabled %}Or enable Cash / Guest mode{% else %}Scan to start an order{% endif %}</small>
                     </div>
                 </div>
 
@@ -1717,7 +1719,8 @@ function scanCard(cardNumber) {
     })
     .then(data => {
         if (data.success) {
-            document.getElementById('guestModeToggle').checked = false;
+            const _gt = document.getElementById('guestModeToggle');
+            if (_gt) _gt.checked = false;
             document.getElementById('customer-name').textContent = data.employee_name;
             document.getElementById('customer-dept').textContent = data.department;
             document.getElementById('customer-balance').textContent = formatMoney(data.balance);
@@ -1750,7 +1753,8 @@ function clearCustomer() {
     document.getElementById('customer-info').style.display = 'none';
     document.getElementById('active_card_id').value = '';
     document.getElementById('active_employee_id').value = '';
-    document.getElementById('guestModeToggle').checked = false;
+    const _gt = document.getElementById('guestModeToggle');
+    if (_gt) _gt.checked = false;
     updateCheckoutBtn();
     updatePosSteps();
     focusRfidInput();

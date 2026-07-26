@@ -11,6 +11,7 @@ from django.views.decorators.http import require_GET, require_POST
 from balance.models import EmployeeBalance
 from employee.models import EmployeeCard
 from inventory.models import FoodCategory, MenuItem
+from users.permissions import can_use_guest_mode
 
 from .services.checkout import CheckoutError, process_checkout
 from .services.menu_stock import build_pos_menu_stock
@@ -80,6 +81,7 @@ def pos_dashboard(request):
         'menu_stock': menu_stock,
         'receipt_defaults': get_receipt_settings(),
         'voice_enabled': get_active_llm().is_configured,
+        'guest_enabled': can_use_guest_mode(request.user),
     })
 
 
@@ -131,6 +133,9 @@ def api_checkout(request):
         card_id = data.get('card_id')
         employee_id = data.get('employee_id')
         is_guest = str(card_id).upper() == 'GUEST' or str(employee_id).upper() == 'GUEST'
+
+        if is_guest and not can_use_guest_mode(request.user):
+            return JsonResponse({'success': False, 'message': 'Not allowed to run guest orders'})
 
         if not is_guest and (not card_id or not employee_id):
             return JsonResponse({'success': False, 'message': 'Scan employee card or enable guest mode'})
