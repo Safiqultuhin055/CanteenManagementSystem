@@ -105,3 +105,24 @@ Configure each provider's key, model, and `base_url` in the admin. Set `is_defau
 to pick the primary; inactive rows are skipped. If the active provider is
 unreachable the assistant shows **"Voice assistant unreachable"** — check the
 provider's `base_url` is running and reachable from the app host.
+
+## Face login (AI)
+
+Employees can log in at the POS by camera instead of an RFID card.
+
+- **Register** — Admin → Employees → open an employee → **Face Registration**
+  panel → *Register Face*. Captures several frames, averages a 128-d descriptor
+  (client-side, face-api.js), and stores it in `face_embeddings` linked to the
+  employee. Re-registering overwrites the existing face.
+- **Login** — POS → **Face** button (next to Voice) → camera matches the live
+  face against registered embeddings server-side (euclidean distance, threshold
+  0.6). On a match the employee is logged in (same as a card scan) and the voice
+  assistant opens automatically; on no match it shows an error and lets you retry.
+
+Recognition runs in the browser (no server ML deps); model weights are vendored
+under `static/vendor/face-api/`. Schema: `database/27_face_embeddings.sql`.
+
+> **Camera needs a secure context.** `getUserMedia` only works over **https://**
+> or **localhost / 127.0.0.1**. On a plain-http LAN host (e.g.
+> `http://192.168.x:port`) the browser blocks the camera — serve the app over
+> HTTPS (or a localhost tunnel) in production for face capture to work.

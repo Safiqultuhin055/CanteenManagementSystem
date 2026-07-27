@@ -1,0 +1,258 @@
+{% extends "admin/cms_change_form.html" %}
+{% load static %}
+
+{% block extrahead %}{{ block.super }}
+<style>
+  .face-reg-card{margin:14px 0;padding:18px 20px;background:linear-gradient(160deg,#f8fafc,#fff);border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 4px 16px rgba(15,23,42,.06);}
+  #content-main .module.face-host{position:relative;}
+  .face-reg-card.in-fieldset{position:absolute;top:58px;right:20px;width:clamp(300px,46%,600px);margin:0;}
+  @media (max-width:1200px){.face-reg-card.in-fieldset{position:static;width:auto;margin:14px 0;}}
+  .face-reg-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .face-reg-head h2{font-size:15px;margin:0;font-weight:700;color:#111827;}
+  .face-reg-badge{font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;}
+  .face-reg-badge.on{background:#dcfce7;color:#166534;}
+  .face-reg-badge.off{background:#f3f4f6;color:#6b7280;}
+  .face-reg-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  .face-btn{border:0;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;}
+  .face-btn.primary{background:#2563eb;color:#fff;}
+  .face-btn.primary:hover{background:#1d4ed8;}
+  .face-btn.danger{background:#fee2e2;color:#b91c1c;}
+  .face-btn.danger:hover{background:#fecaca;}
+  .face-reg-meta{font-size:12px;color:#6b7280;margin:0 0 12px;}
+
+  /* Phone-frame capture modal. */
+  .face-modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:9999;
+    background:radial-gradient(120% 90% at 50% 0%,rgba(49,46,129,.5),rgba(2,6,23,.88));
+    backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);padding:16px;}
+  .face-modal.show{display:flex;animation:faceFade .25s ease;}
+  @keyframes faceFade{from{opacity:0}to{opacity:1}}
+  .face-phone2{position:relative;width:min(330px,92vw);height:min(650px,90vh);border-radius:44px;padding:11px;
+    background:linear-gradient(160deg,#2b3245,#0b0f19 60%);
+    box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 0 2px rgba(148,163,184,.12),inset 0 0 0 1px rgba(255,255,255,.05);
+    animation:facePop .3s cubic-bezier(.2,.9,.3,1.3);}
+  @keyframes facePop{from{transform:translateY(14px) scale(.96);opacity:0}to{transform:none;opacity:1}}
+  .face-screen2{position:relative;width:100%;height:100%;border-radius:34px;overflow:hidden;background:#020617;}
+  .face-notch2{position:absolute;top:0;left:50%;transform:translateX(-50%);z-index:6;width:120px;height:26px;background:#05070d;border-radius:0 0 16px 16px;}
+  .face-notch2::after{content:"";position:absolute;top:9px;left:50%;transform:translateX(-50%);width:44px;height:5px;border-radius:3px;background:#1e2636;}
+  .face-screen2 video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);}
+  .face-screen2::before{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;
+    background:linear-gradient(180deg,rgba(2,6,23,.6) 0%,transparent 22%,transparent 55%,rgba(2,6,23,.85) 100%);}
+  .face-top2{position:absolute;top:0;left:0;right:0;z-index:7;display:flex;align-items:center;justify-content:space-between;padding:12px 18px 0;color:#e2e8f0;}
+  .face-top2 .ttl{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700;}
+  .face-top2 .ttl i{color:#a5b4fc;}
+  .face-x2{width:30px;height:30px;border:0;border-radius:50%;background:rgba(15,23,42,.55);color:#cbd5e1;font-size:16px;line-height:1;cursor:pointer;}
+  .face-x2:hover{background:rgba(15,23,42,.85);color:#fff;}
+  .face-ring{position:absolute;z-index:4;top:19%;left:50%;transform:translateX(-50%);width:62%;aspect-ratio:3/4;border-radius:50%;pointer-events:none;
+    border:3px solid rgba(165,180,252,.55);box-shadow:0 0 0 100vmax rgba(2,6,23,.35);transition:border-color .25s,box-shadow .25s;}
+  .face-ring::after{content:"";position:absolute;inset:-3px;border-radius:50%;border:3px solid transparent;border-top-color:#818cf8;animation:faceSpin 1.4s linear infinite;}
+  .face-ring.good{border-color:#22c55e;box-shadow:0 0 0 100vmax rgba(2,6,23,.2),0 0 26px rgba(34,197,94,.6);}
+  .face-ring.good::after{border-top-color:transparent;animation:none;}
+  @keyframes faceSpin{to{transform:rotate(360deg)}}
+  .face-scan2{position:absolute;z-index:5;left:8%;right:8%;height:3px;border-radius:3px;top:20%;
+    background:linear-gradient(90deg,transparent,#818cf8,transparent);box-shadow:0 0 14px 2px rgba(129,140,248,.7);animation:faceScan 2.6s ease-in-out infinite;}
+  @keyframes faceScan{0%{top:22%;opacity:0}15%{opacity:1}85%{opacity:1}100%{top:74%;opacity:0}}
+  .face-panel2{position:absolute;z-index:8;left:0;right:0;bottom:0;padding:16px 18px 20px;text-align:center;}
+  .face-status{font-size:14px;font-weight:600;color:#e2e8f0;min-height:20px;margin:0 0 12px;text-shadow:0 1px 6px rgba(0,0,0,.6);}
+  .face-status.err{color:#fca5a5;}
+  .face-status.ok{color:#86efac;}
+  .face-progress{height:5px;background:rgba(148,163,184,.22);border-radius:999px;overflow:hidden;margin:0 0 14px;}
+  .face-progress i{display:block;height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,#6366f1,#22c55e);transition:width .25s;}
+  .face-modal-actions{display:flex;gap:10px;}
+  .face-mbtn{flex:1;border:0;border-radius:14px;padding:13px 0;font-size:14px;font-weight:700;cursor:pointer;transition:filter .15s,transform .1s;}
+  .face-mbtn:active{transform:scale(.97);}
+  .face-mbtn.go{background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;box-shadow:0 8px 20px rgba(79,70,229,.4);}
+  .face-mbtn.go:hover{filter:brightness(1.08);}
+</style>
+{% endblock %}
+
+{% block content %}{{ block.super }}
+{% if original and original.pk %}
+<div class="face-reg-card" id="faceRegCard"
+     data-employee-id="{{ original.pk }}"
+     data-save-url="{% url 'employee:api_face_save' %}"
+     data-status-url="{% url 'employee:api_face_status' %}"
+     data-delete-url="{% url 'employee:api_face_delete' %}">
+  <div class="face-reg-head">
+    <h2>🙂 Face Registration</h2>
+    <span class="face-reg-badge off" id="faceBadge">Checking…</span>
+  </div>
+  <p class="face-reg-meta" id="faceMeta">
+    Register this employee's face so they can log in at the POS by camera.
+  </p>
+  <div class="face-reg-actions">
+    <button type="button" class="face-btn primary" id="faceRegBtn">Register Face</button>
+    <button type="button" class="face-btn danger" id="faceDelBtn" style="display:none;">Remove Face</button>
+  </div>
+</div>
+
+<div class="face-modal" id="faceModal" aria-modal="true" role="dialog">
+  <div class="face-phone2">
+    <div class="face-screen2">
+      <div class="face-notch2"></div>
+      <video id="faceVideo" playsinline muted></video>
+      <div class="face-top2">
+        <span class="ttl"><i class="bi bi-person-bounding-box"></i> Register Face</span>
+        <button type="button" class="face-x2" id="faceCancelBtn" aria-label="Close">&times;</button>
+      </div>
+      <div class="face-scan2"></div>
+      <div class="face-ring" id="faceRing"></div>
+      <div class="face-panel2">
+        <div class="face-status" id="faceStatus">Starting camera…</div>
+        <div class="face-progress"><i id="faceBar"></i></div>
+        <div class="face-modal-actions">
+          <button type="button" class="face-mbtn go" id="faceRetryBtn" style="display:none;">Retry</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>window.FACE_MODEL_URL = "{% static 'vendor/face-api/model' %}";</script>
+<script src="{% static 'vendor/face-api/face-api.min.js' %}"></script>
+<script src="{% static 'js/face_engine.js' %}"></script>
+<script>
+(function () {
+  var card = document.getElementById('faceRegCard');
+  if (!card) return;
+
+  // Move the panel into the empty right column of the first fieldset (Identity).
+  var host = document.querySelector('#content-main .module');
+  if (host) {
+    host.classList.add('face-host');
+    card.classList.add('in-fieldset');
+    host.appendChild(card);
+  }
+
+  var EMP = card.dataset.employeeId;
+  var SAVE_URL = card.dataset.saveUrl, STATUS_URL = card.dataset.statusUrl, DEL_URL = card.dataset.deleteUrl;
+  var SAMPLES = 6;
+
+  var badge = document.getElementById('faceBadge');
+  var meta = document.getElementById('faceMeta');
+  var regBtn = document.getElementById('faceRegBtn');
+  var delBtn = document.getElementById('faceDelBtn');
+  var modal = document.getElementById('faceModal');
+  var video = document.getElementById('faceVideo');
+  var ring = document.getElementById('faceRing');
+  var bar = document.getElementById('faceBar');
+  var statusEl = document.getElementById('faceStatus');
+  var cancelBtn = document.getElementById('faceCancelBtn');
+  var retryBtn = document.getElementById('faceRetryBtn');
+
+  var stream = null, running = false;
+
+  function csrftoken() {
+    var m = document.cookie.match(/csrftoken=([^;]+)/);
+    return m ? m[1] : '';
+  }
+  function setStatus(msg, kind) {
+    statusEl.textContent = msg;
+    statusEl.className = 'face-status' + (kind ? ' ' + kind : '');
+  }
+  function setBadge(on, text) {
+    badge.className = 'face-reg-badge ' + (on ? 'on' : 'off');
+    badge.textContent = text;
+  }
+
+  function refreshStatus() {
+    fetch(STATUS_URL + '?employee_id=' + encodeURIComponent(EMP), { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.registered) {
+          setBadge(true, 'Registered');
+          delBtn.style.display = '';
+          regBtn.textContent = 'Update Face';
+          meta.textContent = 'Face registered' + (d.sample_count ? ' (' + d.sample_count + ' samples)' : '') +
+            (d.updated_at ? ' · updated ' + new Date(d.updated_at).toLocaleString() : '');
+        } else {
+          setBadge(false, 'Not registered');
+          delBtn.style.display = 'none';
+          regBtn.textContent = 'Register Face';
+          meta.textContent = "Register this employee's face so they can log in at the POS by camera.";
+        }
+      })
+      .catch(function () { setBadge(false, 'Status unavailable'); });
+  }
+
+  function openModal() {
+    modal.classList.add('show');
+    retryBtn.style.display = 'none';
+    bar.style.width = '0';
+    ring.classList.remove('good');
+    setStatus('Loading face models…');
+    FaceEngine.loadModels()
+      .then(function () { return FaceEngine.startCamera(video); })
+      .then(function (s) { stream = s; captureLoop(); })
+      .catch(function (e) { fail(e.message || 'Camera error'); });
+  }
+
+  function fail(msg) {
+    running = false;
+    setStatus(msg, 'err');
+    retryBtn.style.display = '';
+  }
+
+  function captureLoop() {
+    running = true;
+    var got = [], misses = 0;
+    setStatus('Position your face in the circle…');
+    function tick() {
+      if (!running) return;
+      FaceEngine.captureDescriptor(video).then(function (desc) {
+        if (!running) return;
+        if (desc) {
+          got.push(desc);
+          ring.classList.add('good');
+          bar.style.width = Math.round(got.length / SAMPLES * 100) + '%';
+          setStatus('Captured ' + got.length + '/' + SAMPLES + ' — hold still', 'ok');
+          if (got.length >= SAMPLES) { submit(got); return; }
+        } else {
+          ring.classList.remove('good');
+          misses++;
+          if (misses % 6 === 0) setStatus('No face detected — move closer / better light');
+        }
+        setTimeout(tick, 180);
+      }).catch(function () { setTimeout(tick, 300); });
+    }
+    tick();
+  }
+
+  function submit(list) {
+    running = false;
+    setStatus('Saving…');
+    var avg = FaceEngine.averageDescriptors(list);
+    fetch(SAVE_URL, {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken() },
+      body: JSON.stringify({ employee_id: EMP, descriptor: avg, sample_count: list.length })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.success) {
+        ring.classList.add('good'); bar.style.width = '100%';
+        setStatus('Face registered ✓', 'ok'); setTimeout(closeModal, 900); refreshStatus();
+      } else fail(d.message || 'Save failed');
+    }).catch(function () { fail('Network error — retry'); });
+  }
+
+  function closeModal() {
+    running = false;
+    FaceEngine.stopCamera(stream); stream = null;
+    modal.classList.remove('show');
+  }
+
+  regBtn.addEventListener('click', openModal);
+  cancelBtn.addEventListener('click', closeModal);
+  retryBtn.addEventListener('click', openModal);
+  delBtn.addEventListener('click', function () {
+    if (!confirm('Remove this face registration?')) return;
+    fetch(DEL_URL, {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken() },
+      body: JSON.stringify({ employee_id: EMP })
+    }).then(function (r) { return r.json(); }).then(function () { refreshStatus(); });
+  });
+
+  refreshStatus();
+})();
+</script>
+{% endif %}
+{% endblock %}

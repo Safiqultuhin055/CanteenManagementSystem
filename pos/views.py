@@ -10,9 +10,11 @@ from django.views.decorators.http import require_GET, require_POST
 
 from balance.models import EmployeeBalance
 from employee.models import EmployeeCard
+from employee.services import face as face_svc
 from inventory.models import FoodCategory, MenuItem
 from users.permissions import can_use_guest_mode
 
+from .models import Order
 from .services.checkout import CheckoutError, process_checkout
 from .services.menu_stock import build_pos_menu_stock
 from .services.receipt_settings import get_receipt_settings
@@ -50,6 +52,15 @@ def _find_employee_card(card_number: str):
             return card
         card = base.filter(card_number__icontains=card_number).first()
     return card
+
+
+def _employee_is_returning(employee_id) -> bool:
+    """True if the employee has any prior (non-deleted) order — used to skip the
+    welcome greeting for repeat customers."""
+    try:
+        return Order.objects.filter(employee_id=employee_id, is_deleted=False).exists()
+    except Exception:
+        return False
 
 
 @login_required
@@ -116,11 +127,66 @@ def api_scan_card(request):
             'card_id': card.id,
             'employee_id': employee.id,
             'card_number': card.card_number,
+            'is_returning': _employee_is_returning(employee.id),
         })
     except json.JSONDecodeError:
         return JsonResponse({'success': False, 'message': 'Invalid request data'})
     except Exception as exc:
         logger.exception('Card scan failed')
+        return JsonResponse({'success': False, 'message': str(exc)})
+
+
+@login_required
+@require_POST
+def api_face_recognize(request):
+    """Match a live face descriptor to a registered employee and return the
+    same payload as a card scan, so the POS can log them in and start voice."""
+    try:
+        data = json.loads(request.body)
+        descriptor = face_svc.parse_descriptor(data.get('descriptor'))
+    except face_svc.FaceError as exc:
+        return JsonResponse({'success': False, 'message': str(exc)})
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid request data'})
+
+    try:
+        employee, dist = face_svc.find_match(descriptor)
+        if not employee:
+            return JsonResponse({'success': False, 'message': 'Face not recognized — try again'})
+
+        card = (
+            EmployeeCard.objects.filter(
+                employee_id=employee.id, is_active=True, is_deleted=False,
+                card_status='ACTIVE',
+            )
+            .order_by('-id')
+            .first()
+        )
+        if not card:
+            return JsonResponse({
+                'success': False,
+                'message': f'{employee.full_name} recognized, but no active card is linked',
+            })
+
+        bal = EmployeeBalance.objects.filter(employee_id=employee.id).first()
+        balance = float(bal.advance_balance) if bal else 0.0
+        credit_limit = float((bal.credit_limit - bal.credit_used) if bal else 0)
+        dept = employee.department.department_name if employee.department_id else '—'
+
+        return JsonResponse({
+            'success': True,
+            'employee_name': employee.full_name,
+            'department': dept,
+            'balance': balance,
+            'credit_limit': credit_limit,
+            'card_id': card.id,
+            'employee_id': employee.id,
+            'card_number': card.card_number,
+            'is_returning': _employee_is_returning(employee.id),
+            'match_distance': round(dist, 4),
+        })
+    except Exception as exc:
+        logger.exception('Face recognition failed')
         return JsonResponse({'success': False, 'message': str(exc)})
 
 

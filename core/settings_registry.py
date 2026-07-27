@@ -28,6 +28,7 @@ SETTINGS_SECTIONS = [
             {'name': 'Departments', 'icon': 'bi-building', 'url': '/admin/employee/department/', 'code': 'departments'},
             {'name': 'Employees', 'icon': 'bi-people', 'url': '/admin/employee/employee/', 'code': 'employees'},
             {'name': 'Employee cards', 'icon': 'bi-credit-card', 'url': '/admin/employee/employeecard/', 'code': 'cards'},
+            {'name': 'Face registrations', 'icon': 'bi-person-bounding-box', 'url': '/admin/employee/faceembedding/', 'code': 'faces'},
         ],
     },
     {

@@ -53,6 +53,30 @@ class Employee(models.Model):
     def __str__(self):
         return name_with_code(self.full_name, self.employee_code)
 
+class FaceEmbedding(models.Model):
+    """One registered face per employee (128-d face-api.js descriptor as JSON)."""
+    employee = models.OneToOneField(
+        Employee, on_delete=models.CASCADE, db_column='employee_id',
+        related_name='face_embedding',
+    )
+    embedding = models.TextField()  # JSON array of 128 floats
+    model = models.CharField(max_length=50, default='face-api-128')
+    sample_count = models.IntegerField(default=1)
+    is_active = models.BooleanField(default=True)
+    is_deleted = models.BooleanField(default=False)
+    created_by = models.IntegerField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_by = models.IntegerField(blank=True, null=True)
+    updated_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        db_table = 'face_embeddings'
+        managed = False
+
+    def __str__(self):
+        return f'Face — {self.employee}'
+
+
 class EmployeeCard(models.Model):
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, db_column='employee_id')
     card_number = models.CharField(max_length=100, unique=True)

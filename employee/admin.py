@@ -2,7 +2,7 @@ from django.contrib import admin
 
 from core.admin_base import CanteenModelAdmin
 from core.admin_forms import DepartmentAdminForm, EmployeeAdminForm, EmployeeCardAdminForm
-from .models import Department, Employee, EmployeeCard
+from .models import Department, Employee, EmployeeCard, FaceEmbedding
 
 
 @admin.register(Department)
@@ -19,6 +19,7 @@ class DepartmentAdmin(CanteenModelAdmin):
 @admin.register(Employee)
 class EmployeeAdmin(CanteenModelAdmin):
     form = EmployeeAdminForm
+    change_form_template = 'admin/employee/employee/change_form.html'
     list_display = ('employee_code', 'full_name', 'department', 'designation', 'is_active')
     search_fields = ('employee_code', 'full_name', 'email', 'phone')
     list_filter = ('department', 'is_active', 'employee_type')
@@ -28,6 +29,14 @@ class EmployeeAdmin(CanteenModelAdmin):
         ('Contact', {'fields': ('email', 'phone', 'address', 'emergency_contact')}),
         ('Status', {'fields': ('profile_image', 'is_active')}),
     )
+
+
+@admin.register(FaceEmbedding)
+class FaceEmbeddingAdmin(CanteenModelAdmin):
+    list_display = ('employee', 'model', 'sample_count', 'is_active', 'updated_at')
+    search_fields = ('employee__full_name', 'employee__employee_code')
+    list_filter = ('is_active', 'model')
+    autocomplete_all_relations = True
 
 
 @admin.register(EmployeeCard)

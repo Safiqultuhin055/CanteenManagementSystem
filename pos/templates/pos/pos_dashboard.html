@@ -1285,6 +1285,9 @@
                 </span>
             </div>
             <span class="pos-clock d-none d-md-inline" id="pos-clock"></span>
+            <button type="button" class="btn btn-sm face-launch-btn" id="face-launch-btn" onclick="openFaceModal()" title="Face login">
+                <i class="bi bi-person-bounding-box me-1"></i> Face
+            </button>
             {% if voice_enabled %}
             <button type="button" class="btn btn-sm voice-launch-btn" id="voice-launch-btn" onclick="openVoiceModal(true)" title="Voice order (Bangla)">
                 <i class="bi bi-mic-fill me-1"></i> Voice
@@ -1471,6 +1474,102 @@
 </div>
 
 <div class="pos-toast" id="pos-toast" role="alert"></div>
+
+<style>
+  .face-launch-btn{background:rgba(99,102,241,.18);color:#c7d2fe;border:1px solid rgba(99,102,241,.4);}
+  .face-launch-btn:hover{color:#fff;filter:brightness(1.12);}
+
+  .face-overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:1200;
+    background:radial-gradient(120% 90% at 50% 0%,rgba(49,46,129,.55),rgba(2,6,23,.9));
+    backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);padding:16px;}
+  .face-overlay.show{display:flex;animation:faceFade .25s ease;}
+  @keyframes faceFade{from{opacity:0}to{opacity:1}}
+
+  /* Phone frame */
+  .face-phone{position:relative;width:min(340px,90vw);height:min(680px,88vh);aspect-ratio:9/18;
+    border-radius:44px;padding:11px;
+    background:linear-gradient(160deg,#2b3245,#0b0f19 60%);
+    box-shadow:0 30px 80px rgba(0,0,0,.65),0 0 0 2px rgba(148,163,184,.12),inset 0 0 0 1px rgba(255,255,255,.05);
+    animation:facePop .3s cubic-bezier(.2,.9,.3,1.3);}
+  @keyframes facePop{from{transform:translateY(14px) scale(.96);opacity:0}to{transform:none;opacity:1}}
+  .face-screen{position:relative;width:100%;height:100%;border-radius:34px;overflow:hidden;background:#020617;}
+  /* Notch */
+  .face-notch{position:absolute;top:0;left:50%;transform:translateX(-50%);z-index:6;
+    width:120px;height:26px;background:#05070d;border-radius:0 0 16px 16px;}
+  .face-notch::after{content:"";position:absolute;top:9px;left:50%;transform:translateX(-50%);
+    width:44px;height:5px;border-radius:3px;background:#1e2636;}
+
+  .face-screen video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);}
+  /* Legibility gradients top + bottom */
+  .face-screen::before{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;
+    background:linear-gradient(180deg,rgba(2,6,23,.6) 0%,transparent 22%,transparent 55%,rgba(2,6,23,.85) 100%);}
+
+  .face-top{position:absolute;top:0;left:0;right:0;z-index:7;display:flex;align-items:center;justify-content:space-between;
+    padding:12px 18px 0;color:#e2e8f0;}
+  .face-top .ttl{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700;letter-spacing:.02em;}
+  .face-top .ttl i{color:#a5b4fc;}
+  .face-x{width:30px;height:30px;border:0;border-radius:50%;background:rgba(15,23,42,.55);color:#cbd5e1;
+    font-size:16px;line-height:1;cursor:pointer;backdrop-filter:blur(4px);}
+  .face-x:hover{background:rgba(15,23,42,.85);color:#fff;}
+
+  /* Face guide oval (#face-ring) */
+  /* Full-frame selection border + corner brackets */
+  .face-guide{position:absolute;z-index:4;top:13%;left:5%;right:5%;bottom:11%;pointer-events:none;
+    border-radius:14px;border:3px solid rgba(165,180,252,.5);
+    box-shadow:0 0 0 100vmax rgba(2,6,23,.28);transition:border-color .25s,box-shadow .25s;}
+  .face-guide::before,.face-guide::after{content:"";position:absolute;width:34px;height:34px;border:4px solid #818cf8;transition:border-color .25s;}
+  .face-guide::before{top:-3px;left:-3px;border-right:0;border-bottom:0;border-top-left-radius:14px;}
+  .face-guide::after{bottom:-3px;right:-3px;border-left:0;border-top:0;border-bottom-right-radius:14px;}
+  .face-guide.good{border-color:#22c55e;box-shadow:0 0 0 100vmax rgba(2,6,23,.18),0 0 28px rgba(34,197,94,.5);}
+  .face-guide.good::before,.face-guide.good::after{border-color:#22c55e;}
+
+  /* Scan line */
+  .face-scan{position:absolute;z-index:5;left:6%;right:6%;height:3px;border-radius:3px;top:15%;
+    background:linear-gradient(90deg,transparent,#818cf8,transparent);
+    box-shadow:0 0 14px 2px rgba(129,140,248,.7);animation:faceScan 2.8s ease-in-out infinite;}
+  @keyframes faceScan{0%{top:15%;opacity:0}15%{opacity:1}85%{opacity:1}100%{top:87%;opacity:0}}
+  .face-phone.matched .face-scan{display:none;}
+
+  /* Bottom glass panel */
+  .face-panel{position:absolute;z-index:8;left:0;right:0;bottom:0;padding:16px 18px 20px;text-align:center;}
+  .face-msg{font-size:14.5px;font-weight:600;color:#e2e8f0;min-height:22px;margin:0 0 12px;
+    text-shadow:0 1px 6px rgba(0,0,0,.6);}
+  .face-msg.err{color:#fca5a5;}
+  .face-msg.ok{color:#86efac;}
+  .face-bar{height:5px;background:rgba(148,163,184,.22);border-radius:999px;overflow:hidden;margin:0 0 14px;}
+  .face-bar i{display:block;height:100%;width:0;border-radius:999px;
+    background:linear-gradient(90deg,#6366f1,#22c55e);transition:width .25s;}
+  .face-acts{display:flex;gap:10px;}
+  .face-btn2{flex:1;border:0;border-radius:14px;padding:13px 0;font-size:14px;font-weight:700;cursor:pointer;
+    transition:filter .15s,transform .1s;}
+  .face-btn2:active{transform:scale(.97);}
+  .face-btn2.ghost{background:rgba(148,163,184,.16);color:#e2e8f0;backdrop-filter:blur(4px);}
+  .face-btn2.ghost:hover{background:rgba(148,163,184,.28);}
+  .face-btn2.go{background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;box-shadow:0 8px 20px rgba(79,70,229,.4);}
+  .face-btn2.go:hover{filter:brightness(1.08);}
+</style>
+
+<div class="face-overlay" id="face-overlay" role="dialog" aria-modal="true" aria-label="Face login">
+  <div class="face-phone" id="face-phone">
+    <div class="face-screen">
+      <div class="face-notch"></div>
+      <video id="face-video" playsinline muted></video>
+      <div class="face-top">
+        <span class="ttl"><i class="bi bi-person-bounding-box"></i> Face Login</span>
+        <button type="button" class="face-x" id="face-cancel" aria-label="Close">&times;</button>
+      </div>
+      <div class="face-scan"></div>
+      <div class="face-guide" id="face-ring"></div>
+      <div class="face-panel">
+        <div class="face-msg" id="face-msg">Starting camera…</div>
+        <div class="face-bar"><i id="face-bar"></i></div>
+        <div class="face-acts">
+          <button type="button" class="face-btn2 go" id="face-retry" style="display:none;">Retry</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div class="pos-sale-overlay" id="sale-overlay" role="dialog" aria-modal="true">
     <div class="pos-sale-card">
@@ -1719,23 +1818,7 @@ function scanCard(cardNumber) {
     })
     .then(data => {
         if (data.success) {
-            const _gt = document.getElementById('guestModeToggle');
-            if (_gt) _gt.checked = false;
-            document.getElementById('customer-name').textContent = data.employee_name;
-            document.getElementById('customer-dept').textContent = data.department;
-            document.getElementById('customer-balance').textContent = formatMoney(data.balance);
-            document.getElementById('customer-credit').textContent = formatMoney(data.credit_limit);
-            document.getElementById('active_card_id').value = data.card_id;
-            document.getElementById('active_employee_id').value = data.employee_id;
-            setInitials(data.employee_name);
-            document.getElementById('waiting-scan').style.display = 'none';
-            document.getElementById('customer-info').style.display = 'block';
-            showToast('Card accepted: ' + data.employee_name);
-            updateCheckoutBtn();
-            updatePosSteps();
-            if (typeof openVoiceModal === 'function' && window.VOICE_ENABLED) {
-                openVoiceModal(false, data.employee_name);
-            }
+            applyPosCustomer(data, 'Card accepted: ' + data.employee_name);
         } else {
             showToast(data.message || 'Invalid card', 'error');
         }
@@ -1746,6 +1829,28 @@ function scanCard(cardNumber) {
         if (pill) pill.innerHTML = '<span class="pos-pill-dot"></span> RFID ready';
         focusRfidInput();
     });
+}
+
+function applyPosCustomer(data, toastMsg) {
+    // Returning buyer (has prior orders) → skip the welcome greeting in voice.
+    window._customerReturning = !!data.is_returning;
+    const _gt = document.getElementById('guestModeToggle');
+    if (_gt) _gt.checked = false;
+    document.getElementById('customer-name').textContent = data.employee_name;
+    document.getElementById('customer-dept').textContent = data.department;
+    document.getElementById('customer-balance').textContent = formatMoney(data.balance);
+    document.getElementById('customer-credit').textContent = formatMoney(data.credit_limit);
+    document.getElementById('active_card_id').value = data.card_id;
+    document.getElementById('active_employee_id').value = data.employee_id;
+    setInitials(data.employee_name);
+    document.getElementById('waiting-scan').style.display = 'none';
+    document.getElementById('customer-info').style.display = 'block';
+    if (toastMsg) showToast(toastMsg);
+    updateCheckoutBtn();
+    updatePosSteps();
+    if (typeof openVoiceModal === 'function' && window.VOICE_ENABLED) {
+        openVoiceModal(false, data.employee_name);
+    }
 }
 
 function clearCustomer() {
@@ -2502,9 +2607,15 @@ window.VOICE_ENABLED = {% if voice_enabled %}true{% else %}false{% endif %};
         unlockTts();
 
         const hasCard = el('active_card_id').value !== '';
-        const greet = hasCard
-            ? 'মাইমুন কমপ্লেক্স ক্যান্টিনে আপনাকে আন্তরিক স্বাগতম। আমি আপনার অর্ডার গ্রহণ করতে প্রস্তুত।'
-            : 'মাইমুন কমপ্লেক্স ক্যান্টিনে আপনাকে আন্তরিক স্বাগতম। অর্ডার করতে আগে দয়া করে আপনার কার্ড যুক্ত করুন।';
+        let greet;
+        if (!hasCard) {
+            greet = 'মাইমুন কমপ্লেক্স ক্যান্টিনে আপনাকে আন্তরিক স্বাগতম। অর্ডার করতে আগে দয়া করে আপনার কার্ড যুক্ত করুন।';
+        } else if (window._customerReturning) {
+            // Repeat customer — no welcome, jump straight to the order prompt.
+            greet = 'কী অর্ডার করবেন, বলুন।';
+        } else {
+            greet = 'মাইমুন কমপ্লেক্স ক্যান্টিনে আপনাকে আন্তরিক স্বাগতম। আমি আপনার অর্ডার গ্রহণ করতে প্রস্তুত।';
+        }
         appendMsg('bot', greet);
         convo.push({ role: 'assistant', content: greet });
         setHint(speechSupported ? 'শুনছি… বলুন' : 'এই ব্রাউজারে ভয়েস নেই — টাইপ করুন');
@@ -2546,6 +2657,143 @@ window.VOICE_ENABLED = {% if voice_enabled %}true{% else %}false{% endif %};
 
     // Expose speak() so checkout can announce the token number in Bangla.
     window.posSpeak = speak;
+})();
+</script>
+
+<!-- Face login (client-side face-api.js → server match → applyPosCustomer) -->
+<script>window.FACE_MODEL_URL = "{% static 'vendor/face-api/model' %}";</script>
+<script src="{% static 'vendor/face-api/face-api.min.js' %}"></script>
+<script src="{% static 'js/face_engine.js' %}"></script>
+<script>
+(function () {
+  const RECOGNIZE_URL = "{% url 'pos:api_face_recognize' %}";
+  const MAX_ATTEMPTS = 12;  // server match tries before giving up (needs 2 same-person hits)
+  const overlay = document.getElementById('face-overlay');
+  const phone = document.getElementById('face-phone');
+  const video = document.getElementById('face-video');
+  const ring = document.getElementById('face-ring');
+  const bar = document.getElementById('face-bar');
+  const msg = document.getElementById('face-msg');
+  const cancelBtn = document.getElementById('face-cancel');
+  const retryBtn = document.getElementById('face-retry');
+  if (!overlay) return;
+
+  let stream = null, running = false;
+
+  // Spoken (and shown) when the face is not registered / not matched / errored.
+  const NOT_REG_MSG = 'আপনার ছবি এখনো রেজিস্ট্রেশন করা হয়নি, রেজিস্ট্রেশন করার জন্য অ্যাডমিন/ অথবা এইচ আর সাথে /ক্যান্টিন ম্যানেজার এর সাথে যোগাযোগ করুন।  ধন্যবাদ';
+
+  function setMsg(t, kind) { msg.textContent = t; msg.className = 'face-msg' + (kind ? ' ' + kind : ''); }
+
+  function speakBn(text) {
+    try {
+      if (typeof window.posSpeak === 'function') { window.posSpeak(text); return; }
+      if ('speechSynthesis' in window) {
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = 'bn-BD';
+        window.speechSynthesis.speak(u);
+      }
+    } catch (e) {}
+  }
+
+  // Not registered / no match / recognition error → do NOT open voice; speak the notice.
+  function notRegistered() {
+    running = false;
+    ring.classList.remove('good');
+    bar.style.width = '0';
+    setMsg(NOT_REG_MSG, 'err');
+    retryBtn.style.display = '';
+    speakBn(NOT_REG_MSG);
+  }
+
+  window.openFaceModal = function () {
+    overlay.classList.add('show');
+    if (phone) phone.classList.remove('matched');
+    retryBtn.style.display = 'none';
+    bar.style.width = '0';
+    ring.classList.remove('good');
+    setMsg('Loading face models…');
+    FaceEngine.loadModels()
+      .then(() => FaceEngine.startCamera(video))
+      .then((s) => { stream = s; recognizeLoop(); })
+      .catch((e) => fail(e.message || 'Camera error'));
+  };
+
+  function fail(text) {
+    running = false;
+    setMsg(text, 'err');
+    retryBtn.style.display = '';
+  }
+
+  function closeFaceModal() {
+    running = false;
+    FaceEngine.stopCamera(stream); stream = null;
+    overlay.classList.remove('show');
+  }
+
+  function recognizeLoop() {
+    running = true;
+    let attempts = 0;
+    let confirmId = null, confirmCount = 0;   // require 2 consecutive same-person hits
+    setMsg('Position your face in the circle…');
+    function tick() {
+      if (!running) return;
+      FaceEngine.captureDescriptor(video).then((desc) => {
+        if (!running) return;
+        if (!desc) {
+          ring.classList.remove('good');
+          setMsg('Looking for a face — move closer / better light');
+          return setTimeout(tick, 220);
+        }
+        ring.classList.add('good');
+        attempts++;
+        bar.style.width = Math.round(attempts / MAX_ATTEMPTS * 100) + '%';
+        setMsg('Recognizing… (' + attempts + ')');
+        fetch(RECOGNIZE_URL, {
+          method: 'POST', credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+          body: JSON.stringify({ descriptor: desc })
+        }).then((r) => r.json()).then((data) => {
+          if (!running) return;
+          if (data.success) {
+            // Confirm the SAME person twice in a row before logging in.
+            if (data.employee_id === confirmId) { confirmCount++; }
+            else { confirmId = data.employee_id; confirmCount = 1; }
+            if (confirmCount < 2) {
+              setMsg('যাচাই করা হচ্ছে…', 'ok');
+              if (attempts >= MAX_ATTEMPTS) return notRegistered();
+              return setTimeout(tick, 200);
+            }
+            running = false;
+            if (phone) phone.classList.add('matched');
+            ring.classList.add('good');
+            bar.style.width = '100%';
+            setMsg('Welcome, ' + data.employee_name + ' ✓', 'ok');
+            setTimeout(function () {
+              closeFaceModal();
+              applyPosCustomer(data, 'Face login: ' + data.employee_name);
+            }, 750);
+          } else if (attempts >= MAX_ATTEMPTS) {
+            notRegistered();
+          } else {
+            confirmId = null; confirmCount = 0;   // reset on any non-match
+            setMsg('মিলছে না — স্থির থাকুন', '');
+            setTimeout(tick, 250);
+          }
+        }).catch(() => {
+          if (attempts >= MAX_ATTEMPTS) notRegistered();
+          else setTimeout(tick, 400);
+        });
+      }).catch(() => setTimeout(tick, 350));
+    }
+    tick();
+  }
+
+  cancelBtn.addEventListener('click', closeFaceModal);
+  retryBtn.addEventListener('click', window.openFaceModal);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && overlay.classList.contains('show')) closeFaceModal();
+  });
 })();
 </script>
 {% endblock %}

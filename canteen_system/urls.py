@@ -30,6 +30,7 @@ urlpatterns = [
     path('distribution/', include('distribution.urls', namespace='distribution')),
     path('reports/', include('reports.urls', namespace='reports')),
     path('inventory/', include('inventory.urls', namespace='inventory')),
+    path('employee/', include('employee.urls', namespace='employee')),
 ]
 
 if settings.DEBUG:
